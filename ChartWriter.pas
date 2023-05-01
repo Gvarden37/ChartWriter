@@ -36,6 +36,7 @@ const
   NearestVal = False;
   MatchExact = True;
   MatchAny = False;
+  aa = 1;
 
   GraphOnly = 1;
   GraphAndLabels = 2;
