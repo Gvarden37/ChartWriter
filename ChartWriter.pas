@@ -36,7 +36,6 @@ const
   NearestVal = False;
   MatchExact = True;
   MatchAny = False;
-  aa = 1;
 
   GraphOnly = 1;
   GraphAndLabels = 2;
@@ -207,6 +206,7 @@ const
   R_NoData = 2;
   R_Updating = 3;
   R_NoChart = 4;
+  R_Unknown = 0;
 
 type
   TChartWriter = class;
