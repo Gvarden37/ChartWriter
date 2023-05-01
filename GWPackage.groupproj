@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{FE616A9A-E18C-4D22-A319-A5698B556CA1}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="GraphW.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DclGraphW.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="GraphW">
+        <MSBuild Projects="GraphW.dproj"/>
+    </Target>
+    <Target Name="GraphW:Clean">
+        <MSBuild Projects="GraphW.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GraphW:Make">
+        <MSBuild Projects="GraphW.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DclGraphW">
+        <MSBuild Projects="DclGraphW.dproj"/>
+    </Target>
+    <Target Name="DclGraphW:Clean">
+        <MSBuild Projects="DclGraphW.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DclGraphW:Make">
+        <MSBuild Projects="DclGraphW.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="GraphW;DclGraphW"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="GraphW:Clean;DclGraphW:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="GraphW:Make;DclGraphW:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
