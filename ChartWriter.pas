@@ -2279,7 +2279,7 @@ uses DateUtils, Dialogs, System.Generics.Defaults, JPEG;
 var
   Fmt: TFormatSettings;
 const
-  MsgCnt = 107;
+  MsgCnt = 108;
   ErrorMsg: array [0 .. MsgCnt - 1] of string = (
     { 0 } 'Value is tied to Series bounds',
     { 1 } 'Not enough space to render this diagram',
@@ -2387,7 +2387,8 @@ const
    { 103 } 'Value fields must either be integers or floats',
    { 104 } 'Name fields must either be date times, integers or strings',
    { 105 } 'Dataset %s is not active',
-   { 106 } 'Not a ChartWriter file'
+   { 106 } 'Not a ChartWriter file',
+   { 107 } 'Warning: Changing the name type to a spanned type might cause problems rendering the chart.'
     );
 
   msg_TiedToSeries = 0;
@@ -2497,6 +2498,7 @@ const
   msg_NameDataType = 104;
   msg_DSNotActive = 105;
   msg_InvalidFile = 106;
+  msg_ChangeSpanned = 107;
 
 type
   trealpoint = record
@@ -5848,19 +5850,42 @@ end;
 procedure TCWChart.SetNameType(Value: TNameType);
 var
   NT : TNameType;
+  G :TCWGraph;
 begin
+  if csLoading in ComponentState then
+  begin
+    FNametype := Value;
+    Exit;
+  end;
   if not (csDesigning in ComponentState) then
   begin
       Exit;
   end;
-     if (SeriesDefs.Count > 0) and (SeriesDefs[0].Graph is TCWPie) and (Value <> ntGeneral) then
-      ShowGWError(msg_PieGeneral);
+  if not (csLoading in ComponentState) then
+   if (Writer = nil) then
+    ShowGWError(msg_WriterNotAssigned);
+
+  if Writer.DsgnRealData then
+    Exit;
+
+  if Value = FNameType then
+    Exit;
+  if (SeriesDefs.Count > 0) and (SeriesDefs[0].Graph is TCWPie) and (Value <> ntGeneral) then
+    ShowGWError(msg_PieGeneral);
   if IsActive and (Writer.Count > 0) then
   begin
      NT := Writer.DetectNameType(0);
-     if NT <> Value then
+     if (NT <> Value) and (Value <> ntGeneral) and not (Writer.ActiveGraph is TCWCurve) then
        ShowGWError(msg_NameTypeData);
   end;
+
+  if (Writer <> nil) and (SeriesDefs.Count > 0) and (Value <> ntGeneral) then
+  begin
+   G := AllEqual;
+   if (G <> nil) and not (G is TCWCurve) then
+     ShowGWMessage(msg_ChangeSpanned);
+  end;
+
 
   FNameType := Value;
   if FNameType = ntGeneral then
@@ -8191,6 +8216,12 @@ begin
       Result := -1;
       FBarWidth := BWidth;
       Exit;
+    end
+    else
+    begin
+      if Result > BWidth then
+        Result := 0;
+
     end;
   finally
     FBarWidth := BWidth;
@@ -13776,6 +13807,8 @@ end;
 
 procedure TChartWriter.WMLOADFILE(var Msg: Tmessage);
 begin
+ if csDesigning in ComponentState then
+   Exit;
  try
   if Assigned(Chart) and (Chart.FileName <> '')  then
   begin
@@ -17139,8 +17172,17 @@ var
          Response := srRefuseExcept;
          G := Chart.SeriesDefs[i].Graph as TCWAxisGraph;
          QR := G.QuerySpace;
-         if QR <> 0 then
+         if (QR <> 0) then //and not (csDesigning in ComponentState) then
            FOnQuerySpace(G, QR, Response)
+         (*else if QR <> 0 then
+         begin
+           if QR = -1 then
+           begin
+             Response := srRefuseExcept;
+           end
+           else
+             Response := srAccept;
+         end*)
          else
            Exit;
          if (Response = srAccept) and not (QR = -1) then
@@ -17202,7 +17244,8 @@ begin
   CreateSections;
   Chart.CreateLegendContent;
 
-  if Assigned(FOnQuerySpace) and InState(stExecuting) then
+  if (Assigned(FOnQuerySpace)
+  and not (csDesigning in ComponentState)) then // and InState(stExecuting) then
   begin
      DoQuery;
   end;
@@ -22785,7 +22828,7 @@ begin
     end;
     Exit;
   end;
-  if (Value <> nil) and (Count > 0) then
+  if (Value <> nil) and (Count > 0) and not (csDesigning in ComponentState) then
   begin
     NT := DetectNameType(0);
     if Value.NameType <> NT then
