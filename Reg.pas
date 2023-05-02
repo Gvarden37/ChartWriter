@@ -43,6 +43,8 @@ begin
   begin
     TChartWriter(Component).InitDesigner := false;
     TChartWriter(Component).DsgnRealData := false;
+    TChartWriter(Component).Clear;
+
   end;
    TChartWriter(Component).Repaint;
  end
