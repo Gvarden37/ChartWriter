@@ -35,6 +35,6 @@ requires
   ChartW;
 
 contains
-  Reg in 'Reg.pas';
+  Regs in 'Regs.pas';
 
 end.

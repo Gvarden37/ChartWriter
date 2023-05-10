@@ -120,6 +120,10 @@ const
   C_CurveLineStyle = 'LineStyle';
   C_CurveLineWidth = 'LineWidth';
   C_CurveBaseLineValue = 'BaseLineValue';
+  C_CurveStep = 'Step';
+  C_SmoothLines = 'SmoothLines';
+  C_AreaOutline = 'AreaOutline';
+  C_AreaOutlineColor = 'AreaOutlineColor';
   C_UseSeriesStyles = 'UseSeriesStyles';
   C_MinPointSpacing = 'MinPointSpacing';
   C_MaxPointSpacing = 'MaxPointSpacing';
@@ -210,6 +214,12 @@ const
 
 type
   TChartWriter = class;
+
+  TWriterListElement = class
+    Writer : TChartWriter;
+    Obj : TObject;
+  end;
+  TWriterList = TObjectList<TWriterListElement>;
 
   TCWException = class(Exception)
     Errorcode: integer;
@@ -501,6 +511,8 @@ type
     var ItemIndex: integer) of object;
   TQuerySpaceEvent= procedure(Sender: TObject; const QueryResult: integer;
    var Response : TSpaceResponse) of object;
+  TOnTitleEvent = procedure(Sender: TObject; const ASeriesIndex: integer;
+   var Title : string) of object;
 
   TCWLegend = class;
   TCWLegends = class;
@@ -520,11 +532,13 @@ type
   TCWGraph = class(TComponent)
   private
     FWriter: TChartWriter;
+    FWID : TWriterListElement;
     FGDIP: TGPGraphics;
     function GetCanvas: TCanvas;
     function GetActiveColor(SeriesIndex, ItemIndex : integer): TColor; virtual;
     function GetSeries(Value : integer) : TSeries;
-    procedure SetWriter(Value: TChartWriter);
+    function GetWriter : TChartWriter;
+    function GetChart : TCWChart;
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     property Canvas: TCanvas read GetCanvas;
@@ -537,12 +551,12 @@ type
     function InChart(SeriesIndex : integer = -1) : Boolean;
     property ActiveColor[SeriesIndex, ItemIndex : integer] : TColor read GetActiveColor;
     property Series[Index : integer] : TSeries read GetSeries;
+    property Chart : TCWChart read GetChart;
+    property Writer: TChartWriter read GetWriter;
   published
-    property Writer: TChartWriter read FWriter write SetWriter;
+
   end;
 
-
-  TWriterList = TList<TChartWriter>;
   TChartList = TList<TCWChart>;
   TCWNameSectionDefs = class;
   TCWValueSectionDefs = class;
@@ -663,12 +677,16 @@ type
     FStyle: TCurveStyle;
     FLineStyle: TCurvelineStyle;
     FLineWidth: integer;
+    FStep : Boolean;
     FBaseLineValue: single;
     FPointMarkers: TPointMarkers;
     FPointWidth: integer;
     FMinPointSpacing: integer;
     { Minimun unit space before Contraction takes place }
-    FAreaBrush: TBrush;
+    FAreaBrush: TBrush; {Neighbor polygon only}
+    FAreaOutline : Boolean;
+    FAreaOutlineColor : TColor;
+    FSmoothLines : Boolean;
     FBeaconPoints: Boolean;
     FSeriesStyles: TCWSeriesStyles;
     FNeighborAreas: array of integer;
@@ -687,6 +705,7 @@ type
     procedure SetStyle(Value: TCurveStyle);
     procedure SetLineStyle(Value: TCurvelineStyle);
     procedure SetLineWidth(Value: integer);
+    procedure SetStep(Value : Boolean);
     function GetStyle: TCurveStyle;
     function GetLineStyle: TCurvelineStyle;
     function GetLineWidth: integer;
@@ -696,6 +715,9 @@ type
     procedure SetActiveStyle(ASeries: TSeries; Value: TCurveStyle);
     procedure SetActiveLineStyle(ASeries : TSeries; Value: TCurvelineStyle);
     procedure SetActiveLineWidth(ASeries: TSeries; Value: integer);
+    procedure SetAreaOutlineColor(Value : TColor);
+    procedure SetAreaOutline(Value : Boolean);
+    procedure SetSmoothLines(Value : Boolean);
     procedure SetBaseLineValue(Value: single);
     procedure SetPointMarkers(Value: TPointMarkers);
     procedure SetPointWidth(Value: integer);
@@ -710,7 +732,7 @@ type
 
     procedure DoDrawNeighbors;
     procedure DrawNeighbors(Serie1, Serie2, NeighborIndex: integer);
-    procedure DrawTheLine(ASource : TSeries; Indx: integer; x1, y1, x2, y2: integer);
+    procedure DrawTheLine(ASource : TSeries; Indx: integer; x1, y1, x2, y2: integer; StatLine : Boolean = false);
   public
     procedure Draw; override;
     property UseSeriesStyles: Boolean read GetUseSeriesStyles;
@@ -729,6 +751,9 @@ type
     property MinPointSpacing default 2;
     property AnimationSpeed;
     property Animation: Boolean read FAnimation write FAnimation default False;
+    property AreaOutline : Boolean read FAreaOutline write SetAreaOutline default false;
+    property AreaOutlineColor : TColor read FAreaOutlineColor write SetAreaOutlineColor default clBlack;
+    property SmoothLines : Boolean read FSmoothLines write SetSmoothLines default true;
     property Style: TCurveStyle read GetStyle write SetStyle default csLine;
     property LineStyle: TCurvelineStyle read GetLineStyle write SetLineStyle
       default lsSolid;
@@ -742,6 +767,7 @@ type
       default False;
     property SeriesStyles: TCWSeriesStyles read FSeriesStyles
       write FSeriesStyles;
+    property Step : Boolean read FStep write SetStep default false;
 
     property OnDrawCurve: TDrawCurveEvent read FOnDrawCurve write FOnDrawCurve;
     property OnDrawCurveLine: TDrawCurveLineEvent read FOnDrawCurveLine
@@ -944,8 +970,7 @@ type
     FFont: TFont;
     FPen: TPen;
     FVisible: Boolean;
-    FWriter : TChartWriter;
-    procedure SetWriter(Value : TChartWriter);
+    FWID : TWriterListElement;
     procedure SetCaptionHorzMargin(Value: integer);
     procedure SetCaptionVertMargin(Value: integer);
     procedure SetVisible(Value: Boolean);
@@ -953,6 +978,7 @@ type
     procedure SetProlongedLines(Value : Boolean);
     procedure SetShowLines(Value : Boolean);
     function GetSectionType: TNameSectionType;
+    function GetWriter : TChartWriter;
     procedure DoCheck;
     procedure GraphChanged(Sender : TObject);
     function GetOwnerChart : TCWChart;
@@ -962,9 +988,9 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-
+    property Chart : TCWChart read GetOwnerChart;
+    property Writer: TChartWriter read GetWriter;
   published
-    property OwnerChart : TCWChart read GetOwnerChart;
     property Sections: TCWSectionItems read FSections write FSections;
     property CaptionLayout: TCaptionLayout read FCaptionLayout
       write SetCaptionLayout default clOppositeSideOfLabels;
@@ -978,7 +1004,6 @@ type
       default False;
     property ShowLines: Boolean read FShowLines write SetShowLines default True;
     property Visible: Boolean read FVisible write SetVisible default True;
-    property Writer: TChartWriter read FWriter write SetWriter;
   end;
 
   TCWNameSectionDefs = class(TCWSectionDefs)
@@ -1043,6 +1068,7 @@ type
     procedure SetColor(Value : TColor);
     procedure SetValueAxis(Value: TValueAxisNumber);
     function ActualAxis : TValueAxis;
+    function GetTitle: string;
   protected
     function GetDisplayName: string; override;
   public
@@ -1052,7 +1078,7 @@ type
     property Chart : TCWChart read GetChart;
   published
     property Graph: TCWGraph read FGraph write SetGraph;
-    property Title: string read FTitle write SetTitle;
+    property Title: string read GetTitle write SetTitle;
     property Color: TColor read FColor write SetColor default clBlack;
     property ValueAxis : TValueAxisNumber read FValueAxis write SetValueAxis default vaValueAxis1;
     property Visible : Boolean read FVisible write SetVisible default true;
@@ -1090,7 +1116,6 @@ type
 
   TCWLegend = class(TComponent)
   private
-    FWriter : TChartWriter;
     FContents: TLegendContents;
     FContentFlow: TContentFlow;
     FText: TStrings;
@@ -1118,6 +1143,7 @@ type
     FColoredText: Boolean;
     FTransparency: integer;
     FOnLocatePoint: TLocatePointEvent;
+    FWID : TWriterListElement;
 
     function GetOwnerChart : TCWChart;
     function GetLeft: integer;
@@ -1138,21 +1164,21 @@ type
     function Summary: Boolean;
     property Canvas: TCanvas read GetCanvas;
     property InsideGraph: Boolean read GetInsideGraph;
-    procedure SetWriter(Value : TChartWriter);
+    function GetWriter : TChartWriter;
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
-    property OwnerChart: TCWChart read GetOwnerChart;
+    property Chart: TCWChart read GetOwnerChart;
     property Left: integer read GetLeft;
     property Top: integer read GetTop;
     property Width: integer read GetWidth;
     property Height: integer read GetHeight;
+    property Writer : TChartWriter read GetWriter;
     constructor Create(AComponent: TComponent); override;
     destructor Destroy; override;
     procedure Draw;
     procedure Assign(Source: TPersistent); override;
   published
-    property Writer : TChartWriter read FWriter write SetWriter;
     property Anchoring: TLegendAnchoring read FAnchoring write FAnchoring
       default anRightOutside;
     property Contents: TLegendContents read FContents write FContents
@@ -1539,6 +1565,7 @@ type
   TCWChart = class(TComponent)
   private
     FWriter: TChartWriter;
+    FWID : TWriterListElement;
     FNameType: TNameType;
     FItemColors: TCWColors;
     FSeriesDefs : TCWSeriesDefs;
@@ -1566,6 +1593,8 @@ type
     FFileName : TFileName;
     FDataset : TDataset;
     FNameField, FValueFields : string;
+    FOnTitle : TOnTitleEvent;
+    FOnGetData : TNotifyEvent;
     function GetAxisCount : integer;
     procedure SetWallWidth(Value : integer);
     function GetWallWidth : integer;
@@ -1587,6 +1616,8 @@ type
     procedure SetFileName(Value : TFileName);
     procedure SetDataset(Value : TDataset);
     function GetVisibleCount : integer;
+    function GetTitle : string;
+    function GetWriter : TChartWriter;
 
     function ValAx1Graph : TCWGraph;
     procedure CreateLegendContent;
@@ -1629,17 +1660,20 @@ type
     function GraphCount(AGraph : TCWGraph) : integer;
     function IsActive : Boolean;
     property VisibleCount : integer read GetVisibleCount;
+    property Writer: TChartWriter read GetWriter;
 
   published
-    property Writer: TChartWriter read FWriter write SetWriter;
+    //property Writer: TChartWriter read FWriter write SetWriter;
     property ItemColors: TCWColors read FItemColors write FItemColors;
     property SeriesDefs : TCWSeriesDefs read FSeriesDefs write FSeriesDefs;
     property Legends : TCWLegends read FLegends write FLegends;
-    property Title : string read FTitle write SetTitle;
+    property Title : string read GetTitle write SetTitle;
     property FileName : TFileName read FFileName write SetFileName;
     property Dataset : TDataset read FDataset write SetDataset;
     property NameField : string read FNameField write FNameField;
     property ValueFields : string read FValueFields write FValueFields;
+    property OnTitle : TOnTitleEvent read FOnTitle write FOnTitle;
+    property OnGetData : TNotifyEvent read FOnGetData write FOnGetData;
 
   end;
 
@@ -1667,6 +1701,9 @@ type
   published
    property ValuePrecision;
    property CalcPercentages;
+   property ValueAxis1;
+   property AxisElements;
+   property OverflowAction;
   end;
 
   TChartWriter = class(TCustomControl)
@@ -1798,6 +1835,7 @@ type
     FAnimInfo: TAnimInfo;
     FDividerLinePen: TPen;
     FTextComputed : Boolean; {Flag to prevent ComputeTextExtent to run twice}
+    FNeedsIds : Boolean;
 
     FCallCounter : integer; {CheckLabelfreqs}
 
@@ -1987,6 +2025,7 @@ type
     procedure FontChanged(Sender : TObject);
     procedure AddDsgnSeries(ANameType : TNameType; Indx : integer);
     procedure RenderDesigner(Deleted : integer = 0);
+    procedure CreateIDS;
 
     property NameUnit: integer read FNameUnit write SetNameUnit;
     { Not used as property }
@@ -2039,6 +2078,7 @@ type
     procedure ClearHistory;
     procedure ClearObjects;
     function AsBitmap(GraphElement: integer): TBitmap;
+    procedure SetChartAs(AChart : TCWChart; AsGraph : TCWGraph);
     procedure ContractValues(Rate: integer; ContractType: TContractionType);
     function IndexOfName(AName: string): integer; { In the names list }
     function IndexOfNameEx(AName: string): integer; { In the orig list }
@@ -2278,8 +2318,9 @@ uses DateUtils, Dialogs, System.Generics.Defaults, JPEG;
 
 var
   Fmt: TFormatSettings;
+  WriterList : TWriterList;
 const
-  MsgCnt = 108;
+  MsgCnt = 109;
   ErrorMsg: array [0 .. MsgCnt - 1] of string = (
     { 0 } 'Value is tied to Series bounds',
     { 1 } 'Not enough space to render this diagram',
@@ -2342,7 +2383,7 @@ const
     { 58 } 'Section type not compatible with name type',
     { 59 } 'Duplicate graphs not allowed',
     { 60 } 'A graph can only be linked to one View',
-    { 61 } 'Graph assignment requires Writer to be set',
+    { 61 } '%s assignment requires Chart.Writer to be set',
     { 62 } 'Correlation view has no active member',
     { 63 } 'Series spaces too small',
     { 64 } 'Time span cannot be zero',
@@ -2388,7 +2429,8 @@ const
    { 104 } 'Name fields must either be date times, integers or strings',
    { 105 } 'Dataset %s is not active',
    { 106 } 'Not a ChartWriter file',
-   { 107 } 'Warning: Changing the name type to a spanned type might cause problems rendering the chart.'
+   { 107 } 'Warning: Changing the name type to a spanned type might cause problems rendering the chart.',
+   { 108 } 'Cannot share %s among different writers'
     );
 
   msg_TiedToSeries = 0;
@@ -2499,6 +2541,7 @@ const
   msg_DSNotActive = 105;
   msg_InvalidFile = 106;
   msg_ChangeSpanned = 107;
+  msg_InvalidShare = 108;
 
 type
   trealpoint = record
@@ -2688,6 +2731,7 @@ end;
 
 { General ------------------------------------------------------}
 
+
 procedure ShowGWError(Errorcode: integer; AddText: string = '');
 var
   S: string;
@@ -2709,7 +2753,6 @@ end;
 procedure ShowGWMessage(MsgCode : integer; AddText : string = '');
 var
   S: string;
-  E: TCWException;
 begin
   if MsgCode = -1 then
     S := AddText
@@ -2722,6 +2765,132 @@ begin
   ShowMessage(S);
 end;
 
+function IndexOfWList(AWriter : TChartWriter; AnObject : TObject) : integer;
+var
+  i : integer;
+begin
+   Result := -1;
+   for I := 0 to WriterList.Count-1 do
+   begin
+      if (WriterList[i].Writer = AWriter)
+      and (WriterList[i].Obj = AnObject)  then
+      begin
+        Result := i;
+        Break;
+      end;
+   end;
+end;
+
+function AddToWList(AWriter : TChartWriter; AnObject : TObject) : TWriterListElement;
+var
+  Sec : TCWSectionDefs;
+  Leg : TCWLegend;
+  Ch : TCWChart;
+  G : TCWGraph;
+  ThisID : TWriterListElement;
+  Indx : integer;
+  i : integer;
+  S: string;
+begin
+  Result := nil;
+  if AWriter = nil then
+  begin
+     Exit;
+  end;
+
+  Sec := nil;
+  Leg := nil;
+  Ch := nil;
+  G := nil;
+
+  if AnObject is TCWSectionDefs then
+  begin
+    Sec := TCWSectionDefs(AnObject);
+    ThisID := TCWSectionDefs(AnObject).FWID;
+    S := 'Sections (' + Sec.Name + ') ' ;
+  end
+  else if AnObject is TCWLegend then
+  begin
+    Leg := TCWLegend(AnObject);
+    ThisID := TCWLegend(AnObject).FWID;
+    S := 'Legends (' + Leg.Name + ') ';
+  end
+  else if AnObject is TCWChart then
+  begin
+    ThisID := TCWChart(AnObject).FWID;
+    Ch := TCWChart(AnObject);
+    S := 'Charts (' + Ch.Name + ') '
+  end
+  else if AnObject is TCWGraph then
+  begin
+    G := TCWGraph(AnObject);
+    ThisID := TCWGraph(AnObject).FWID;
+    S := 'Graphs (' + G.Name  + ') ';
+  end
+  else
+    ThisID := nil;
+
+  {Objects from other writers using that object?}
+  for I := 0 to WriterList.Count-1 do
+    begin
+      if (WriterList[i].Obj = AnObject)
+      and(WriterList[i].Writer <> AWriter)
+      then
+      begin
+        SHowGWError(msg_InvalidShare, S);
+      end;
+    end;
+
+  Result := ThisID;
+
+  Indx := IndexOfWList(AWriter, AnObject);
+  if Indx <> -1 then
+  begin
+    Exit;
+  end;
+
+  if ThisID <> nil then
+  begin
+    if WriterList.IndexOf(ThisID) <> -1  then
+      Exit;
+  end;
+
+  Result := TWriterListElement.Create;
+  Result.Writer := AWriter;
+  Result.Obj := AnObject;
+  WriterList.Add(Result);
+end;
+
+procedure DeleteFromWList(AWriter : TChartWriter);
+var
+  i : integer;
+  found : boolean;
+begin
+  repeat
+   found := false;
+   for I := 0 to WriterList.Count-1 do
+     if WriterList[i].Writer = AWriter then
+     begin
+       WriterList.Delete(I);
+       Found := True;
+       Break;
+     end;
+  until not found;
+end;
+
+function GetWriterFromWList(AnElement : TWriterListElement) : TChartWriter;
+var
+ i : integer;
+begin
+  Result := nil;
+  i := WriterList.IndexOf(AnElement);
+  if i <> -1 then
+    Result := WriterList[i].Writer;
+end;
+
+
+
+
 function qt(AStr: string): string;
 begin
   Result := '''' + AStr + '''';
@@ -2729,12 +2898,12 @@ end;
 
 function InvertColor(Color: TColor): TColor;
 begin
-  Result := RGB(50, 50, 50)
-(*  Color := ColorToRGB(Color);
+//  Result := RGB(100, 100, 100)
+  Color := ColorToRGB(Color);
   if (GetRValue(Color) + GetGValue(Color) + GetBValue(Color)) > 384 then
-    Result := RGB(50, 50, 50)
+    Result := RGB(128, 128, 128)
   else
-    Result := RGB(220, 220, 220);*)
+    Result := RGB(200, 200, 200);
 end;
 
 procedure DrawAlphaBlend(DestBM: HDC; Rect: TRect; Blend: byte;
@@ -5779,6 +5948,7 @@ begin
     inherited;
     Exit;
   end;
+
   if (Operation = opRemove) then
   begin
      if (AComponent is TCWNameSectionDefs) then
@@ -5861,11 +6031,12 @@ begin
   begin
       Exit;
   end;
-  if not (csLoading in ComponentState) then
-   if (Writer = nil) then
-    ShowGWError(msg_WriterNotAssigned);
+  //if not (csLoading in ComponentState) then
+  // if (Writer = nil) then
+  //  ShowGWError(msg_WriterNotAssigned);
 
-  if Writer.DsgnRealData then
+  if Writer <> nil then
+   if Writer.DsgnRealData then
     Exit;
 
   if Value = FNameType then
@@ -5905,9 +6076,23 @@ procedure TCWChart.SetWriter(Value: TChartWriter);
 var
   Indx : integer;
   Old : TChartWriter;
+  W : TChartWriter;
 begin
   if Value = FWriter then
     Exit;
+  if csLoading in ComponentState then
+  begin
+    FWriter := Value;
+    Writer.FChartList.Add(Self);
+    if Value <> nil then
+      FreeNotification(Value);
+    Exit;
+  end;
+  if IsActive then
+   W := Writer
+  else
+   W := nil;
+
   Old := FWriter;
   FWriter := Value;
   if FWriter <> nil then
@@ -5921,6 +6106,11 @@ begin
     Indx := Old.ChartList.IndexOf(Self);
     if Indx <> -1 then
       Old.ChartList.Delete(Indx);
+    if W <> nil then
+    begin
+      W.Chart := nil;
+    end;
+
     if Old <> nil then
      Old.RefreshGraph;
   end;
@@ -5946,12 +6136,32 @@ begin
   end;
 end;
 
+function TCWChart.GetTitle : string;
+begin
+  Result := FTitle;
+  if Assigned(FOnTitle) then
+  begin
+    FOnTitle(Self, -1, Result);
+  end;
+end;
+
+function TCWChart.GetWriter : TChartWriter;
+begin
+  Result := GetWriterFromWList(FWID);
+end;
+
 procedure TCWChart.SetNameSectionDefs(Value: TCWNameSectionDefs);
 var
   FOld: TCWNameSectionDefs;
 begin
   if Value = NameSectionDefs then
     Exit;
+  if csLoading in ComponentState then
+  begin
+    FNameSectionDefs := Value;
+    Value.FWID := AddToWList(Writer, Value);
+    Exit;
+  end;
   FOld := FNameSectionDefs;
   FNameSectionDefs := Value;
   if Value <> nil then
@@ -5962,6 +6172,10 @@ begin
       FNameSectionDefs := FOld;
       raise;
     end;
+  end;
+  if Value <> nil then
+  begin
+    Value.FWID := AddToWList(Writer, Value);
   end;
   if IsActive and (Value <> nil)
   and not(csLoading in componentState) then
@@ -5977,10 +6191,25 @@ begin
 end;
 
 procedure TCWChart.SetValueSectionDefs(Value: TCWValueSectionDefs);
+var
+  Old : TCWValueSectionDefs;
 begin
   if Value = ValueSectionDefs then
     Exit;
+
+  if csLoading in ComponentState then
+  begin
+    FValueSectionDefs := Value;
+    Value.FWID := AddToWList(Writer, Value);
+    Exit;
+  end;
+  Old := FValueSectionDefs;
   FValueSectionDefs := Value;
+  if Value <> nil then
+  begin
+    Value.FWID := AddToWList(Writer,  Value);
+  end;
+
   if IsActive and (Value <> nil)
   and not(csLoading in componentState)
   and (AxisCount = 1) then
@@ -6005,7 +6234,7 @@ begin
      if (TCWBar(Self).Layout = blSideBySide) and (Value = ovCompression) then
       ShowGWError(msg_CompressionSideBySide);
   end;
-  if NameType = ntGeneral then
+  if (NameType = ntGeneral) and not (csLoading in ComponentState) then
   begin
     if Value in [ovCompression, ovContraction] then
       ShowGWError(msg_GeneralNameType);
@@ -6405,13 +6634,24 @@ var
 begin
   if (Self is TCWAxisChart) and (NewGraph is TCWPie) then
     ShowGWError(msg_PieAxisChart)
-  else if (Self is TCWPieChart) and (NewGraph is TCWAxisGraph) then
+  else if (Self is TCWPieChart) and (NewGraph is TCWCurve) then// (NewGraph is TCWAxisGraph) then
     ShowGWError(msg_AxisPieChart);
   for I := 0 to FSeriesDefs.Count-1 do
   begin
-    FSeriesDefs.Items[i].FGraph := NewGraph;
+    FSeriesDefs.Items[i].Graph := NewGraph;
+    if Self is TCWPieChart then
+    begin
+      if NewGraph is TCWBar then
+        FSeriesDefs.Items[i].FValueAxis := vaValueAxis1
+      else
+        FSeriesDefs.Items[i].FValueAxis := vaNone
+      end;
   end;
-  Writer.RefreshGraph;
+  if (Self is TCWPieChart) and (NewGraph is TCWBar) then
+  begin
+    ValueAxis1.ValueSpanFromData := True;
+    ValueAxis1.SetHighLow;
+  end;
 end;
 
 function TCWChart.AllEqual : TCWGraph;
@@ -6533,7 +6773,6 @@ end;
 destructor TCWGraph.Destroy;
 begin
   inherited;
-
 end;
 
 function TCWGraph.GetCanvas: TCanvas;
@@ -6615,22 +6854,16 @@ begin
   Result := clBlack;
 end;
 
-
-procedure TCWGraph.SetWriter(Value: TChartWriter);
+function TCWGraph.GetWriter : TChartWriter;
 begin
-  if Value = FWriter then
-    Exit;
-  if Value = nil then
-  begin
-    FWriter := nil;
-  end
-  else
-  begin
-    FWriter := Value;
-    FWriter.DoRepaint;
-  end;
-  if Value <> nil then
-    Value.FreeNotification(Self);
+  Result := GetWriterFromWList(FWID);
+end;
+
+function TCWGraph.GetChart : TCWChart;
+begin
+  Result := nil;
+  if Writer <> nil then
+    Result := Writer.Chart;
 end;
 
 { TCWAxisGraph ----------------------------------------------------- }
@@ -6670,6 +6903,7 @@ begin
       Break;
     end
   end;
+  if D <> nil then
   for I := 0 to Writer.Chart.SeriesDefs.Count-1 do
   begin
      D2 := Writer.Chart.SeriesDefs[i];
@@ -7085,6 +7319,7 @@ begin
   FPointWidth := 5;
   FPointMarkers := pmNone;
   FMinPointSpacing := 2;
+  FSmoothLines := True;
   FBeaconIndex := -1;
 end;
 
@@ -7188,6 +7423,20 @@ begin
   if (LineWidth = Value) or (Value < 1) then
     Exit;
   FLineWidth := Value;
+  if Writer <> nil then
+    Writer.DoRepaint;
+end;
+
+procedure TCWCurve.SetStep(Value : Boolean);
+begin
+  if (csLoading in componentState) then
+  begin
+    FStep := Value;
+    Exit;
+  end;
+  if (FStep = Value) then
+    Exit;
+  FStep := Value;
   if Writer <> nil then
     Writer.DoRepaint;
 end;
@@ -7297,14 +7546,17 @@ begin
 end;
 
 function TCWCurve.GetStyleIndex(ASeries: TSeries): integer;
+var
+ S : string;
 begin
   Result := -1;
   if (ASeries = nil) then
     Exit;
   begin
-    if ASeries.Title <> '' then
+    S := Writer.Chart.SeriesDefs[ASeries.Index].FTitle;
+    if S <> '' then
     begin
-      Result := SeriesStyles.IndexOf(ASeries.Title);
+      Result := SeriesStyles.IndexOf(S);
     end
     else
     begin
@@ -7319,6 +7571,33 @@ begin
   if (FBaseLineValue = Value) then
     Exit;
   FBaseLineValue := Value;
+  if Writer <> nil then
+    Writer.DoRepaint;
+end;
+
+procedure TCWCurve.SetAreaOutlineColor(Value : TColor);
+begin
+  if (FAreaOutlineColor = Value) then
+    Exit;
+  FAreaOutlineColor := Value;
+  if Writer <> nil then
+    Writer.DoRepaint;
+end;
+
+procedure TCWCurve.SetAreaOutline(Value : Boolean);
+begin
+  if (FAreaOutline = Value) then
+    Exit;
+  FAreaOutline := Value;
+  if Writer <> nil then
+    Writer.DoRepaint;
+end;
+
+procedure TCWCurve.SetSmoothLines(Value : Boolean);
+begin
+  if (FSmoothLines = Value) then
+    Exit;
+  FSmoothLines := Value;
   if Writer <> nil then
     Writer.DoRepaint;
 end;
@@ -7395,38 +7674,54 @@ begin
     Result := FMaxPointSpacing;
 end;
 
-procedure TCWCurve.DrawTheLine(ASource : TSeries; Indx: integer; x1, y1, x2, y2: integer);
+procedure TCWCurve.DrawTheLine(ASource : TSeries; Indx: integer;
+ x1, y1, x2, y2: integer; StatLine : Boolean = false);
 var
    Clr: TColor;
-   Styl: integer;
    CStyl: TCurvelineStyle;
    W: integer;
 begin
-    Styl := 0;
     if Indx = -1 then
       CStyl := lsDot
     else
       CStyl := ActiveLineStyle[ASource];
     W := ActiveLineWidth[ASource];
-    if CStyl = lsDot then
-      Styl := 3
-    else if CStyl = lsDash then
-      Styl := 6;
-    Clr := ActiveColor[ASource.Index, -1];
-    FGPen.SetColor(MakeGPClr(clr));
-    if W = 2 then
-      FGPen.SetWidth(2)
-    else if W = 3 then
-      FGPen.SetWidth(3)
+    if FAreaOutline and (ActiveStyle[Asource] = csClientArea) then
+      Clr := FAreaOutlineColor
     else
-      FGPen.SetWidth(1);
-    if Styl = 3 then
+      Clr := ActiveColor[ASource.Index, -1];
+    FGPen.SetColor(MakeGPClr(clr));
+    FGPen.SetWidth(W);
+    if CStyl = lsDot then
       FGPen.SetDashStyle(DashStyle.DashStyleDot)
-    else if Styl = 6 then
+    else if CStyl = lsDash then
       FGPen.SetDashStyle(DashStyle.DashStyleDash)
     else
       FGPen.SetDashStyle(DashStyle.DashStyleSolid);
-    GDIP.DrawLine(FGPen,x1, y1, x2, y2 );
+
+    if Step and not StatLine and not (ActiveStyle[Asource] = csNeighborArea)then
+    begin
+      GDIP.DrawLine(FGPen,x1, y1, x2, y1);
+      GDIP.DrawLine(FGPen,x2, y1, x2, y2);
+    end
+    else
+    begin
+      if SmoothLines then
+       GDIP.DrawLine(FGPen,x1, y1, x2, y2 )
+      else
+      begin
+        Canvas.Pen.Width := W;
+        Canvas.Pen.Color := Clr;
+        if CStyl = lsDot then
+          Canvas.Pen.Style := psDot
+        else if CStyl = lsDash then
+          Canvas.Pen.Style := psDash
+        else
+          Canvas.Pen.Style := psSolid;
+        Canvas.MoveTo(x1, y1);
+        Canvas.LineTo(x2, y2);
+      end;
+    end;
 end;
 
 procedure TCWCurve.Draw;
@@ -7457,6 +7752,7 @@ var
     R: TRect;
     Sz: TSize;
     Cs: TCurveStyle;
+    Stp : Boolean;
     SerInd, ItmInd: integer;
     Styl: TCurvelineStyle;
     Points: TPointArray;
@@ -7512,7 +7808,10 @@ var
       BV: single;
 
     begin
-      setlength(Pts, ASource.LastItem - ASource.FirstItem + 1 + 3);
+      if Stp then
+        setlength(Pts, (ASource.LastItem - ASource.FirstItem) * 2 + 3)
+      else
+       setlength(Pts, ASource.LastItem - ASource.FirstItem + 1 + 3);
       Pts[0] := P;
       LastPt := P;
       if Cs = csBaseLineArea then
@@ -7543,6 +7842,12 @@ var
         Cnt := 1;
         for i := ASource.FirstItem + 1 to ASource.LastItem do
         begin
+          if Stp then
+          begin
+            P.X := Points[i - ASource.FirstItem].X;
+            Pts[Cnt] := P;
+            Inc(Cnt);
+          end;
           P := Points[i - ASource.FirstItem];
           Pts[Cnt] := P;
           inc(Cnt);
@@ -7559,6 +7864,7 @@ var
         end;
         Pts[High(Pts)] := Pts[0];
 
+        Canvas.Brush.Assign(AreaBrush);
         Canvas.Brush.Color := ActiveColor[ASource.Index, -1];
         Canvas.Pen.Color := Canvas.Brush.Color;
 
@@ -7761,7 +8067,7 @@ var
         PEnd.X := P.X + Writer.GetGraphPrintRect.Left;
         PEnd.Y := P.Y + YMin;
         if not DoLineEvent(ltRegression, -1, FOnDrawStatLine, pStart, PEnd) then
-          DrawTheLine(ASource, -1, pStart.X, pStart.Y, PEnd.X, PEnd.Y);
+          DrawTheLine(ASource, -1, pStart.X, pStart.Y, PEnd.X, PEnd.Y, True);
       end;
     end;
 
@@ -7881,6 +8187,10 @@ var
       Cs := csLine
     else
       Cs := ActiveStyle[ASource];
+    if ActiveStyle[ASource] = csNeighborArea then
+      Stp := false
+    else
+      Stp := Step;
     if (Cs = csBaseLineArea) and
       ((BaseLineValue < Writer.ValueLow) or (BaseLineValue > Writer.ValueHigh)) then
       Cs := csClientArea;
@@ -8187,16 +8497,18 @@ end;
 
 function TCWBar.Is3D: Boolean;
 begin
-  if (FBarStyle = bsFlat) or (Writer = nil) or
+  if (FBarStyle = bsFlat) or
     (FBarStyle in [bsGradientWidth, bsGradientLength]) then
     Result := False
   else if BarWidth <= 10 then
     Result := False
+  else if (FBarStyle = bsCube) and (CubeAngle = 0) then
+    Result := false
   else
+    Result := FBarStyle in [bsCube, bsCylinder];
+  if (Writer <> nil) and Result then
   begin
     Result := Writer.FNamAx.IsXAxis and not(boBaseLine in Options);
-    if Result and (FBarStyle = bsCube) then
-      Result := (CubeAngle > 0)
   end;
 end;
 
@@ -8540,7 +8852,7 @@ begin
   if Value <> FColorUsage then
   begin
     FColorUsage := Value;
-    if Writer <> nil then
+    if InChart then
       Writer.DoRepaint;
   end;
 end;
@@ -8550,7 +8862,7 @@ begin
   if Value = FTextContents then
     Exit;
   FTextContents := Value;
-  if not (csLoading in ComponentState) and (Writer <> nil) then
+  if not (csLoading in ComponentState) and InChart then
     Writer.DoRepaint;
 end;
 
@@ -8559,7 +8871,7 @@ begin
   if Value = FShowQualifier then
     Exit;
   FShowQualifier := Value;
-  if not (csLoading in ComponentState) and (Writer <> nil) then
+  if not (csLoading in ComponentState) and InChart then
     Writer.DoRepaint;
 end;
 
@@ -8573,12 +8885,13 @@ begin
   if not(csLoading in componentState)
   then
   begin
-    if Writer.Scrollable then
+    if InChart and Writer.Scrollable then
     begin
       Writer.FUpdateKinds := Writer.FUpdateKinds + [ukScroll];
       Writer.DoScrollTo(Writer.FScrollIndex);
     end
-    else
+    else if InChart then
+
     begin
       Writer.RefreshGraph;
     end;
@@ -8595,12 +8908,12 @@ begin
   if not(csLoading in componentState)
   then
   begin
-    if Writer.Scrollable then
+    if InChart and Writer.Scrollable then
     begin
       Writer.FUpdateKinds := Writer.FUpdateKinds + [ukScroll];
       Writer.DoScrollTo(Writer.FScrollIndex);
     end
-    else
+    else if Inchart then
     begin
       Writer.RefreshGraph;
     end;
@@ -8617,12 +8930,12 @@ begin
   if not(csLoading in componentState)
   then
   begin
-    if Writer.Scrollable then
+    if Inchart and Writer.Scrollable then
     begin
       Writer.FUpdateKinds := Writer.FUpdateKinds + [ukScroll];
       Writer.DoScrollTo(Writer.FScrollIndex);
     end
-    else
+    else if InChart then
     begin
       Writer.RefreshGraph;
     end;
@@ -10467,7 +10780,7 @@ const
   begin
     R := Writer.Series[SeriesIndex].PieTitleRect;
     S := Writer.Series[SeriesIndex].Title;
-    X := R.CenterPoint.X - Writer.GetTextWidth(lkName, S) div 2;
+    X := R.CenterPoint.X - Canvas.TextWidth(S) div 2;
     Y := R.Top + 5;
     Canvas.Brush.Style := bsClear;
     Canvas.TextOut(X, Y, S);
@@ -10636,7 +10949,14 @@ begin
   if FValueAxis = Value then
     Exit;
   if Chart is TCWPieChart then
-    Exit {Always vNone}
+  begin
+    if TCWSeriesDefs(Collection).Items[0].Graph is TCWPie then
+      Value := vaNone
+    else
+      Value := vaValueAxis1;
+    FValueAxis := value;
+    Exit {Always vNone or va1}
+  end
   else if Value = vaNone then
     Exit;
   if Value = vaValueAxis2 then
@@ -10686,31 +11006,52 @@ begin
   if csLoading in Chart.componentState then
   begin
     FGraph := Value;
+    Value.FWID := AddToWList(Chart.Writer,  Value);
     Exit;
   end;
-  if Chart.Writer = nil then
-    ShowGWError(msg_NoWriter);
   if (Value is TCWPie) and (Chart.NameType <> ntGeneral) then
     ShowGWError(msg_PieGeneral);
   if (Chart is TCWAxisChart) and (Value is TCWPie) then
     Exit
-  else if (Chart is TCWPieChart) and (Value is TCWAxisGraph) then
+  else if (Chart is TCWPieChart) then
+  begin
+  if (Value is TCWCurve)
+  or ((Value is TCWBar) and (TCWBar(Value).ColorUsage <> cuOnItems)) then
     Exit;
+  end;
+
+  Value.FWID := AddToWList(Chart.Writer,  Value);
 
   FGraph := Value;
   if Value is TCWPie then
   begin
     with Collection as TCWSeriesDefs do
     for I := 0 to Count-1 do
-     if not (Items[i].Graph = Value) then
+     //if not (Items[i].Graph = Value) then
+     begin
        Items[i].FGraph := Value;
+       Items[i].FValueAxis := vaNone;
+     end;
   end
   else if Value is TCWBar then
   begin
     with Collection as TCWSeriesDefs do
-    for I := 0 to Count-1 do
-     if (Items[i].Graph is TCWBar) and not (Items[i].Graph = Value)then
-       Items[i].FGraph := Value;
+    begin
+      for I := 0 to Count-1 do
+      begin
+      if Chart is TCWPieChart then
+      begin
+        if Value is TCWBar then
+        begin
+          Items[i].FGraph := Value;
+          Items[i].FValueAxis := vaValueAxis1;
+        end;
+      end
+      else
+       if (Items[i].Graph is TCWBar) and not (Items[i].Graph = Value)then
+         Items[i].FGraph := Value;
+      end;
+    end;
   end
   else
   begin
@@ -10744,7 +11085,14 @@ begin
     if Chart.Legends <> nil then
       Writer.RefreshGraph;
   end;
+end;
 
+function TCWSeriesDef.GetTitle : string;
+begin
+   Result := FTitle;
+   if (Chart = nil) or not Assigned(Chart.FOnTitle) then
+     Exit;
+   Chart.FOnTitle(Chart, Index, Result);
 end;
 
 { TCWSeriesDefs --------------------------------------------------- }
@@ -10875,19 +11223,23 @@ begin
     inherited;
     Exit;
   end;
-  if AComponent = Writer then
-  begin
-     FWriter := nil;
-  end;
 end;
 
-procedure TCWSectionDefs.SetWriter(Value : TChartWriter);
+(*procedure TCWSectionDefs.SetWriter(Value : TChartWriter);
 begin
   if Value = FWriter then
     Exit;
   FWriter := Value;
   if Value <> nil then
     Value.FreeNotification(Self);
+end;*)
+
+function TCWSectionDefs.GetWriter : TChartWriter;
+begin
+  Result := GetWriterFromWList(FWID);
+//  Result := nil;
+//  if Chart <> nil then
+//    Result := Chart.Writer;
 end;
 
 function TCWSectionDefs.GetSectionType: TNameSectionType;
@@ -10915,18 +11267,8 @@ end;
 function TCWSectionDefs.GetOwnerChart : TCWChart;
 begin
   Result := nil;
-  if (Writer = nil) or (Writer.Chart = nil) then
-    Exit;
-  if Self is TCWNameSectionDefs then
-  begin
-    if Writer.Chart.FNameSectionDefs = Self then
-      Result := Writer.Chart;
-  end
-  else
-  begin
-    if Writer.Chart.FValueSectionDefs = Self then
-      Result := Writer.Chart;
-  end;
+  if Writer <> nil then
+    Result := Writer.Chart;
 end;
 
 procedure TCWSectionDefs.SetCaptionHorzMargin(Value: integer);
@@ -11434,7 +11776,20 @@ procedure TCWLegendItem.SetLegend(Value: TCWLegend);
 var
   i: integer;
   L: TCWLegendItem;
+  Lgs : TCWLegends;
+  C : TCWChart;
 begin
+
+  Lgs := Collection as TCWLegends;
+  C := Lgs.Owner as TCWChart;
+
+  if csLoading in C.ComponentState then
+  begin
+    FLegend := Value;
+    FLegend.FWID := AddToWList(C.Writer,  Value);
+    Exit;
+  end;
+
   if Value <> nil then
     for i := 0 to Collection.Count - 1 do
     begin
@@ -11442,9 +11797,12 @@ begin
       if L.Legend = Value then
         ShowGWError(msg_DupLegend);
     end;
+
   FLegend := Value;
+  FLegend.FWID := AddToWList(C.Writer,  Value);
+
   if FLegend <> nil then
-  if not (csLoading in FLegend.ComponentState) and (FLegend.FWriter <> nil) then
+  if FLegend.Writer <> nil then
   begin
     FLegend.Writer.RefreshGraph;
   end;
@@ -11535,10 +11893,6 @@ begin
     inherited;
     Exit;
   end;
-  if AComponent = Writer then
-  begin
-     FWriter := nil;
-  end;
 end;
 
 function TCWLegend.GetCanvas;
@@ -11582,12 +11936,12 @@ begin
       if InsideGraph then
         Result := Writer.GraphRect.Right - FWidth
       else
-        Result := Writer.WorkRect.Right - OwnerChart.Legends.WidestLegend(AxisPosition);
+        Result := Writer.WorkRect.Right - Chart.Legends.WidestLegend(AxisPosition);
     anBottomInside, anBottomOutside:
       Result := GetRelLeft;
     anSeriesOutside:
       if Writer.FNamAx.IsXAxis then
-        Result := Writer.WorkRect.Right - OwnerChart.Legends.WidestLegend(AxisPosition);
+        Result := Writer.WorkRect.Right - Chart.Legends.WidestLegend(AxisPosition);
     anPointInside:
       ;
   end;
@@ -11665,13 +12019,12 @@ begin
     Writer.DoRepaint;
 end;
 
-procedure TCWLegend.SetWriter(Value : TChartWriter);
+function TCWLegend.GetWriter : TChartWriter;
 begin
-  if Value = FWriter then
-    Exit;
-  FWriter := Value;
-  if Value <> nil then
-   Value.FreeNotification(Self);
+  Result := GetWriterFromWList(FWID);
+  //Result := nil;
+  //if FChart <> nil then
+  //  Result := FChart.Writer;
 end;
 
 procedure TCWLegend.SetVisible(Value: Boolean);
@@ -11720,10 +12073,9 @@ end;
 
 function TCWLegend.GetOwnerChart: TCWChart;
 begin
+  Result := nil;
   if Writer <> nil then
-    Result := Writer.Chart
-  else
-    Result := nil;
+    Result := Writer.Chart;
 end;
 
 function TCWLegend.AxisPosition: TAxisPosition;
@@ -12131,14 +12483,14 @@ begin
         end
         else
         begin
-          if OwnerChart.FSeriesDefs.Items[i].Graph is TCWBar then
+          if Chart.FSeriesDefs.Items[i].Graph is TCWBar then
           begin
-            if TCWBar(OwnerChart.FSeriesDefs.Items[i].Graph).ColorUsage = cuOnItems then
+            if TCWBar(Chart.FSeriesDefs.Items[i].Graph).ColorUsage = cuOnItems then
               FWidth := FWidth + W + BullWidth + BullMarg + 5
             else
               FWidth := FWidth + W + 5;
           end
-          else if OwnerChart.FSeriesDefs.Items[i].Graph is TCWPie then
+          else if Chart.FSeriesDefs.Items[i].Graph is TCWPie then
           begin
             FWidth := FWidth + W + BullWidth + BullMarg + 5;
           end
@@ -12234,23 +12586,23 @@ var
 
   function GetColor(SerIndx, ItemIndx: integer): TColor;
   begin
-    if OwnerChart.FSeriesDefs.Items[SerIndx].Graph is TCWBar then
-      with OwnerChart.FSeriesDefs.Items[SerIndx].Graph as TCWBar do
+    if Chart.FSeriesDefs.Items[SerIndx].Graph is TCWBar then
+      with Chart.FSeriesDefs.Items[SerIndx].Graph as TCWBar do
       begin
         if ColorUsage = cuOnSeries then
-          Result := OwnerChart.FSeriesDefs.Items[SerIndx].Color
+          Result := Chart.FSeriesDefs.Items[SerIndx].Color
         else
         begin
-          Result := OwnerChart.ItemColors.Items[ItemIndx].Color;
+          Result := Chart.ItemColors.Items[ItemIndx].Color;
         end;
       end
-    else if OwnerChart.FSeriesDefs.Items[SerIndx].Graph is TCWPie then
-      with OwnerChart.FSeriesDefs.Items[SerIndx].Graph as TCWPie do
+    else if Chart.FSeriesDefs.Items[SerIndx].Graph is TCWPie then
+      with Chart.FSeriesDefs.Items[SerIndx].Graph as TCWPie do
       begin
-        Result := OwnerChart.ItemColors.Items[ItemIndx].Color;
+        Result := Chart.ItemColors.Items[ItemIndx].Color;
       end
     else
-      Result := OwnerChart.FSeriesDefs.Items[SerIndx].Color;
+      Result := Chart.FSeriesDefs.Items[SerIndx].Color;
   end;
 
   procedure CheckOverlaps;
@@ -12285,7 +12637,7 @@ var
 
   begin
     Gr := Writer.GraphRect;
-    Rects := OwnerChart.FSeriesRects;
+    Rects := Chart.FSeriesRects;
     repeat
       Overflow := 0;
       if Rects[0].R.Top <= Gr.Top then
@@ -12361,7 +12713,7 @@ var
         Break;
     until Overflow = 0;
 
-    SumRects := OwnerChart.FSummaryRects;
+    SumRects := Chart.FSummaryRects;
     repeat
       Del := False;
       for i := 0 to Rects.Count - 1 do
@@ -12442,15 +12794,15 @@ var
       P: TPoint;
     begin
       Result := False;
-      for i := 0 to OwnerChart.FPointRects.Count - 1 do
+      for i := 0 to Chart.FPointRects.Count - 1 do
       begin
-        R := OwnerChart.FPointRects[i].R;
+        R := Chart.FPointRects[i].R;
         if ARect.IntersectsWith(R) then
         begin
           Result := True;
           Break;
         end;
-        P := OwnerChart.FPointRects[i].P;
+        P := Chart.FPointRects[i].P;
         PRect := Rect(P.X - leg_PointRad, P.Y - leg_PointRad,
           P.X + leg_PointRad, P.Y + leg_PointRad);
         if ARect.IntersectsWith(PRect) then
@@ -12459,9 +12811,9 @@ var
           Break;
         end;
       end;
-      for i := 0 to OwnerChart.FSummaryRects.Count - 1 do
+      for i := 0 to Chart.FSummaryRects.Count - 1 do
       begin
-        R := OwnerChart.FSummaryRects[i].R;
+        R := Chart.FSummaryRects[i].R;
         if ARect.IntersectsWith(R) then
         begin
           Result := True;
@@ -12602,7 +12954,7 @@ var
     R.Width := Width;
     R.Height := Height;
     NoSpace := False;
-    Rects := OwnerChart.FSummaryRects;
+    Rects := Chart.FSummaryRects;
     repeat
       Located := True;
       for i := 0 to Rects.Count - 1 do
@@ -12690,7 +13042,7 @@ var
     else
       Exit;
 
-    Rects := OwnerChart.FSeriesRects;
+    Rects := Chart.FSeriesRects;
     for i := 0 to Rects.Count - 1 do
     begin
       if Result.IntersectsWith(Rects[i].R) then
@@ -12711,7 +13063,7 @@ var
         Exit;
       end;
 
-      Rects := OwnerChart.FPointRects;
+      Rects := Chart.FPointRects;
       for i := 0 to Rects.Count - 1 do
       begin
         if Result.IntersectsWith(Rects[i].R) then
@@ -12729,7 +13081,7 @@ var
     Rects: TLegendRects;
   begin
     Result := Rect(0, 0, 0, 0);
-    Rects := OwnerChart.FSeriesRects;
+    Rects := Chart.FSeriesRects;
     for i := 0 to Rects.Count - 1 do
       if Index = Rects[i].Index then
       begin
@@ -12757,12 +13109,12 @@ var
 
     if Anchoring = anPointInside then
     begin
-      Rects := OwnerChart.FPointRects;
+      Rects := Chart.FPointRects;
     end
     else if Anchoring = anSeriesOutside then
-      Rects := OwnerChart.FSeriesRects
+      Rects := Chart.FSeriesRects
     else
-      Rects := OwnerChart.FSummaryRects;
+      Rects := Chart.FSummaryRects;
 
     Added := False;
     for i := 0 to Rects.Count - 1 do
@@ -12911,8 +13263,8 @@ begin
             Points := GetPoints(i);
             P := Points[Points.Count - 1];
 
-            if (OwnerChart.FSeriesDefs.Items[i].Graph is TCWBar) and
-              (TCWBar(OwnerChart.FSeriesDefs.Items[i].Graph).Layout = blSideBySide) then
+            if (Chart.FSeriesDefs.Items[i].Graph is TCWBar) and
+              (TCWBar(Chart.FSeriesDefs.Items[i].Graph).Layout = blSideBySide) then
             begin
               if not Writer.GetTrackBar(i, Points.Count - 1, Tb) then
                 Continue;
@@ -12968,8 +13320,8 @@ begin
 
           Points := GetPoints(i);
           P := Points[PointItemIndex];
-          if (OwnerChart.FSeriesDefs.Items[i].Graph is TCWBar) and
-            (TCWBar(OwnerChart.FSeriesDefs.Items[i].Graph).Layout = blSideBySide) then
+          if (Chart.FSeriesDefs.Items[i].Graph is TCWBar) and
+            (TCWBar(Chart.FSeriesDefs.Items[i].Graph).Layout = blSideBySide) then
           begin
             if not Writer.GetTrackBar(i, PointItemIndex, Tb) then
               Continue;
@@ -13558,18 +13910,18 @@ end;
 
 function TSeries.GetStartDate: TDateTime;
 begin
-  if ItemCount > 1 then
+  if (ItemCount > 1) and (Items[0].RealDate <> 0) then
     Result := Items[0].RealDate
   else
-    Result := 0;
+    Result := FStartDate;
 end;
 
 function TSeries.GetEndDate: TDateTime;
 begin
-  if ItemCount > 1 then
+  if (ItemCount > 1) and (Items[ItemCount - 1].RealDate <> 0)  then
     Result := Items[ItemCount - 1].RealDate
   else
-    Result := 0;
+    Result := FEndDate;
 end;
 
 function TSeries.IndexOfName(AName: string): integer;
@@ -13810,11 +14162,19 @@ begin
  if csDesigning in ComponentState then
    Exit;
  try
+  if FNeedsIds then
+  begin
+    CreateIds;
+    Chart.FWID := AddToWList(Self, Chart);
+    FNeedsIds := false;
+  end;
   if Assigned(Chart) and (Chart.FileName <> '')  then
   begin
     if not FileExists(Chart.FileName) then
-      ShowGWError(msg_NoFile, Chart.FileName)
-    else if GetFileType(Chart.FileName) <> 1 then
+      ShowGWError(msg_NoFile, Chart.FileName);
+    if Assigned(Chart.FOnGetData) then
+     Chart.FOnGetData(Chart);
+    if GetFileType(Chart.FileName) <> 1 then
       ShowGWError(msg_RichDesign);
     LoadFromFile(Chart.FileName);
   end
@@ -13823,9 +14183,19 @@ begin
   begin
     if not Chart.Dataset.Active then
       ShowGWError(msg_DsNotActive, Chart.Dataset.Name);
+    if Assigned(Chart.FOnGetData) then
+     Chart.FOnGetData(Chart);
     Clear;
     AddSeries(Chart.Dataset, Chart.NameField, Chart.ValueFields);
     Execute;
+  end
+  else
+  begin
+     if Assigned(Chart) and Assigned(FChart.FOnGetData) then
+     begin
+       Clear;
+       FChart.FOnGetData(Chart)
+     end
   end;
  except
    GoBackError;
@@ -14309,6 +14679,8 @@ var
   Itm1, Itm2: TSeriesItem;
 begin
   Result := 1;
+  if Chart = nil then
+   Exit;
   if FOrigData.Count = 0 then
     Exit;
   Itm1 := FOrigData[0].FSeriesItems[0];
@@ -14479,6 +14851,8 @@ var
   Ser: TSeries;
 begin
   if (csLoading in componentState) then
+    Exit;
+  if Count = 0 then
     Exit;
   FSeriesData.Clear;
   for i := 0 to FOrigData.Count - 1 do
@@ -15182,11 +15556,11 @@ begin
   if AChart = Chart then
     Exit;
   Chart := AChart;
-  if Refresh then
+  {if Refresh then
   begin
     RefreshGraph;
     PostHist;
-  end;
+  end;}
 end;
 
 procedure TChartWriter.CheckSeriesDefs;
@@ -15257,13 +15631,17 @@ begin
 
    if DoH1 then
    begin
-       Chart.ValueAxis1.FValueHigh := H1;
-       Chart.ValueAxis1.FValueLow := L1;
+       if Chart.ValueAxis1.FValueHigh < H1 then
+         Chart.ValueAxis1.FValueHigh := H1;
+       if Chart.ValueAxis1.FValueLow > L1 then
+         Chart.ValueAxis1.FValueLow := L1;
    end;
    if DoH2 then
    begin
-       Chart.ValueAxis2.FValueHigh := H2;
-       Chart.ValueAxis2.FValueLow := L2;
+       if Chart.ValueAxis2.FValueHigh < H2 then
+         Chart.ValueAxis2.FValueHigh := H2;
+       if Chart.ValueAxis2.FValueLow > L2 then
+         Chart.ValueAxis2.FValueLow := L2;
    end;
 end;
 
@@ -15463,7 +15841,10 @@ var
 
 begin
   if (FSeriesData.Count = 0) then
+  begin
+    Clear;
     ShowGWError(msg_NoSeries);
+  end;
   try
     if not InState(stExecuting) then
     begin
@@ -15472,6 +15853,9 @@ begin
     end;
 
     CheckSeriesDefs;
+    if Chart.FSeriesDefs.Count <> FSeriesData.Count then
+      ShowGWError(msg_FormalActual);
+
     LinkTitles;
 
     FLeapdateCount := 0;
@@ -15537,8 +15921,6 @@ begin
       end;
     end;
 
-    if Chart.FSeriesDefs.Count <> FSeriesData.Count then
-      ShowGWError(msg_FormalActual);
     CheckValspans;
     ComputeTextExtent;
 
@@ -15971,12 +16353,12 @@ var
     FHintSeries := SerInd;
     FHintItem := ItmInd;
     G := FSeriesData[SerInd].Graph;
-    if (G <> nil) and not(G is TCWPie) then
+    if (G <> nil) then //and not(G is TCWPie) then
     begin
       FHintColor := G.ActiveColor[SerInd, ItmInd];
-    end
-    else
-      FHintColor := clBlack;
+    end;
+    //else
+    //  FHintColor := Chart.ItemColors.Items[ItmInd].Color;
   end;
 
 begin
@@ -16923,7 +17305,7 @@ begin
     TCWBar(ActiveGraph).GetBarSpace(Space, Cpr, B);
     for i := 0 to FSeriesData.Count - 1 do
     begin
-      if Chart.FSeriesDefs.Items[i].ValueAxis = vaValueAxis1 then
+      if Chart.FSeriesDefs.Items[i].ValueAxis in [vaValueAxis1, vaNone] then
         FActiveValAx := FValax
       else
         FActiveValAx := FValax2;
@@ -16963,6 +17345,9 @@ begin
         FBottomSpace := FBottomSpace - Adds;
       CheckLabelFreqs(False);
       FPosRect := GetPosRect;
+      if Centered and not Recalc then {Recalc according to new posrect. Only bars}
+        ComputePoints(ASeries, True);
+
     end;
   end;
 end;
@@ -17163,6 +17548,8 @@ var
   begin
     if not (ActiveGraph is TCWAxisGraph) or Scrollable then
       Exit;
+    if (ActiveGraph is TCWCurve) and (TCWCurve(ActiveGraph).MinPointSpacing = 0) then
+      Exit;
     if (Chart.NameType = ntGeneral) or
     (Chart.OverflowAction = ovNone) then
     for I := 0 to Chart.SeriesDefs.Count-1 do
@@ -17218,8 +17605,8 @@ begin
 
   if IsInLimbo then
   begin
-    SetState(stLimbo);
-    Exit;
+   SetState(stLimbo);
+   Exit;
   end;
 
   if ActiveGraph is TCWPie then
@@ -17968,6 +18355,18 @@ begin
   end;
 
   try
+    if (Chart <> nil) and (Count > 0) then
+    begin
+      for I := 0 to Chart.SeriesDefs.Count-1 do
+      begin
+        if Chart.SeriesDefs[i].Graph.Writer = nil then
+        begin
+          GoBackError;
+          ShowGWError(msg_WriterNotAssigned);
+        end;
+      end;
+
+    end;
     if (csDesigning in ComponentState) and not DsgnRealData then
     begin
      if not InitDesigner and LiveGraphs then
@@ -18983,7 +19382,6 @@ var
         LegItm := Legends.Add;
         Leg := TCWLegend.Create(Owner);
         LegItm.Legend := Leg;
-        Leg.FWriter := Self;
         Leg.Name := SetCompName(sl.Values[C_Name]);
         Leg.FAlignment := TLegendAlignment(StrToInt(sl.Values[C_Alignment]));
         Leg.FAnchoring := TLegendAnchoring(StrToInt(sl.Values[C_Anchoring]));
@@ -19124,6 +19522,10 @@ var
     c.FStyle := TCurveStyle(StrToInt(Props.Values[C_CurveStyle]));
     c.FLineStyle := TCurvelineStyle(StrToInt(Props.Values[C_CurveLineStyle]));
     c.FLineWidth := StrToInt(Props.Values[C_CurveLineWidth]);
+    c.FStep := Boolean(StrToInt(Props.Values[C_CurveStep]));
+    c.FSmoothLines := Boolean(StrToInt(Props.Values[C_SmoothLines]));
+    c.FAreaOutline := Boolean(StrToInt(Props.Values[C_AreaOutLine]));
+    c.FAreaOutlineColor := TColor(StrToInt(Props.Values[C_AreaOutLineColor]));
     c.FBaseLineValue := StrToFloat(Props.Values[C_CurveBaseLineValue], Fmt);
     c.FMinPointSpacing := StrToInt(Props.Values[C_MinPointSpacing]);
     c.FMaxPointSpacing := StrToInt(Props.Values[C_MaxPointSpacing]);
@@ -19274,7 +19676,7 @@ var
       (StrToInt(Props.Values[C_OverflowAction]));
     C.FValuePrecision := StrToInt(Props.Values[C_ValuePrecision]);
     C.FNumSpanPrecision := StrToInt(Props.Values[C_NumSpanPrecision]);
-    C.Writer := Self;
+    //C.Writer := Self;
     C.FNameType := TNameType(StrToInt(Props.Values[C_NameType]));
     C.FCalcPercentages := Boolean(StrToInt(Props.Values[C_CalcPercentages]));
     C.FAxisOrientation := TAxisOrientation
@@ -19409,7 +19811,6 @@ procedure TChartWriter.LoadFromFile(AFileName: TFileName; DoExecute : Boolean = 
 var
   Files: TFiles;
   i: integer;
-  sl: TStringList;
 
   function GetTimeInterval(T1, T2: TDateTime; ANameType: TNameType): integer;
   begin
@@ -19938,6 +20339,10 @@ var
     SetKeyVal(saveSL, C_CurveLineStyle, IntToStr(Ord(c.LineStyle)));
     SetKeyVal(saveSL, C_CurveStyle, IntToStr(Ord(c.Style)));
     SetKeyVal(saveSL, C_CurveLineWidth, IntToStr(c.LineWidth));
+    SetKeyVal(saveSL, C_CurveStep, IntToStr(Ord(c.Step)));
+    SetKeyVal(saveSL, C_SmoothLines, IntToStr(Ord(c.SmoothLines)));
+    SetKeyVal(saveSL, C_AreaOutline, IntToStr(Ord(c.AreaOutLine)));
+    SetKeyVal(saveSL, C_AreaOutlineColor, IntToStr(Ord(c.AreaOutlineColor)));
     SetKeyVal(saveSL, C_UseSeriesStyles, IntToStr(Ord(c.UseSeriesStyles)));
     SetKeyVal(saveSL, C_CurveBaseLineValue, FormatNum(c.BaseLineValue,
       ValuePrecision));
@@ -20308,7 +20713,6 @@ var
   i: integer;
   Crd: TSeriesItem;
   Ser: TSeries;
-  n: integer;
 begin
   if Values.Count = 0 then
     ShowGWError(msg_DataEmpty);
@@ -20334,7 +20738,14 @@ begin
     Crd.FWriter := Self;
     Crd.FLeapDummy := False;
     TryStrToDateTime(Crd.FName, Crd.FRealDate, Fmt);
-    Crd.FValue := StrToFloat(Values.Values[Crd.FName], Fmt);
+    try
+     Crd.FValue := StrToFloat(Values.Values[Crd.FName], Fmt);
+    except
+      Ser.Free;
+      Crd.Free;
+      Clear;
+      raise;
+    end;
     Crd.FRealVal := Crd.FValue;
 
     if Crd.FValue > Ser.FMax then
@@ -20394,7 +20805,6 @@ var
   i: integer;
   Itm: TSeriesItem;
   Ser: TSeries;
-  n: integer;
   sl : TStringList;
   SerList : TList<Tseries>;
   SerCount : integer;
@@ -22810,12 +23220,40 @@ begin
    RefreshGraph;
 end;
 
+procedure TChartWriter.SetChartAs(AChart : TCWChart; AsGraph : TCWGraph);
+begin
+   if AChart = nil then
+   begin
+     Chart := nil;
+     Exit;
+   end;
+
+   if (AChart = Chart) and (Chart <> nil) and (Chart.AllEqual = AsGraph) then
+     Exit;
+
+   AChart.ReplaceGraphs(AsGraph);
+   if AChart = Chart then
+   begin
+    if Count = 0 then
+      Exit;
+     if (Contraction <> 1) or (AChart.OverflowAction = ovScrolling) then
+       Reload
+     else
+       RefreshGraph;
+     Exit;
+   end;
+   Chart := AChart;
+end;
+
 procedure TChartWriter.SetChart(Value : TCWChart);
 var
   NT : TNameType;
+  Old : TCWChart;
+  Msg : TMessage;
 begin
   if Value = FChart then
     Exit;
+  Old := FChart;
   if csLoading in ComponentState then
   begin
     FChart := Value;
@@ -22825,24 +23263,49 @@ begin
       FChart.FreeNotification(Self);
       if not (csDesigning in ComponentState) then
        PostMessage(Handle, WM_LOADFILE, 0, 0);
+      FNeedsIDs := True;
+      //CreateIDS;
+      FChart.FWID := AddToWList(Self,  Value);
     end;
     Exit;
   end;
-  if (Value <> nil) and (Count > 0) and not (csDesigning in ComponentState) then
-  begin
-    NT := DetectNameType(0);
-    if Value.NameType <> NT then
-      ShowGWError(msg_NameTypeData)
-  end;
 
+  //if (Value <> nil) and (Value.Writer = nil) then
+  //begin
+  //   ShowGWError(msg_NoWriter, 'Chart');
+  //end;
   FChart := Value;
   if FChart <> nil then
   begin
+   try
+    CreateIDS;
+   except
+    FChart := nil;
+    GoBackError;
+    raise;
+   end;
+   FChart.FWID := AddToWList(Self,  Value);
    SetPosition(Value.AxisOrientation);
    FChart.FreeNotification(Self);
    if not (csDesigning in ComponentState) then
-     PostMessage(Handle, WM_LOADFILE, 0, 0);
-
+   begin
+     if (FChart.Dataset <> nil) or (FChart.FileName <> '') then
+     begin
+      WMLOADFILE(Msg);
+     end
+     else if Assigned(FChart.FOnGetData) then
+     begin
+       Clear;
+       FChart.FOnGetData(Chart)
+     end
+     else
+       Clear;
+   end;
+  end
+  else
+  begin
+    Clear;
+    Exit;
   end;
 
   if csDesigning in ComponentState then
@@ -23828,6 +24291,29 @@ begin
   end;
 end;
 
+procedure TChartWriter.CreateIDS;
+var
+  C : TCWChart;
+  i : integer;
+begin
+   DeleteFromWList(Self);
+   C := Chart;
+   if C = nil then
+     Exit;
+   for I := 0 to C.Legends.Count-1 do
+     begin
+       if C.Legends.Items[i].Legend <> nil then
+        C.Legends.Items[i].Legend.FWID := AddToWList(Self, C.Legends.Items[i].Legend);
+     end;
+   for I := 0 to C.SeriesDefs.Count-1 do
+    if C.SeriesDefs[i].Graph <> nil then
+     C.SeriesDefs[i].Graph.FWID := AddToWList(Self, C.SeriesDefs[i].Graph);
+   if C.NameSectionDefs <> nil then
+     C.NameSectionDefs.FWID := AddToWList(Self, C.NameSectionDefs);
+   if C.ValueSectionDefs <> nil then
+     C.ValueSectionDefs.FWID := AddToWList(Self, C.ValueSectionDefs);
+end;
+
 procedure TChartWriter.AddDsgnSeries(ANameType : TNameType; indx : integer);
 var
  sl : TStringList;
@@ -23988,7 +24474,11 @@ end;
 
 initialization
 Fmt := TFormatSettings.Create;
+WriterList := TWriterList.Create;
 System.ReportMemoryLeaksOnShutdown := True;
+
+finalization
+WriterList.Free;
 
 end.
 

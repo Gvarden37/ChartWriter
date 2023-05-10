@@ -1,4 +1,4 @@
-unit Reg;
+unit Regs;
 interface
 uses classes, DesignIntf, DesignEditors, DesignMenus, SysUtils, ChartWriter, VCL.Dialogs;
 
