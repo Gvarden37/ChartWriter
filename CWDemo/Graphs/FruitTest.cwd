@@ -1,0 +1,61 @@
+﻿ChartWriter CWD
+[MAINTITLE]
+TITLE=Fruit sales
+[ENDMAINTITLE]
+[SERIESTITLES]
+TITLE=2021
+TITLE=2022
+[ENDSERIESTITLES]
+[COLORS]
+0,0,0
+0,0,0
+[ENDCOLORS]
+[ITEMCOLORS]
+255,255,0
+0,128,0
+0,128,128
+255,0,0
+255,128,64
+0,255,0
+128,128,0
+239,224,122
+192,220,192
+74,107,12
+[ENDITEMCOLORS]
+[IMAGEFILENAMES]
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Bananas.BMP
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Pears.BMP
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Grapes.BMP
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Apples.BMP
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Oranges.BMP
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Limes.BMP
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Pineapples.BMP
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Peaches.BMP
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Mangos.BMP
+C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Passion fruits.BMP
+[ENDIMAGEFILENAMES]
+[GRAPHS]
+Bar
+[ENDGRAPHS]
+[DATA]
+Bananas=45000
+Pears=3900
+Grapes=34700
+Apples=14000
+Oranges=55000
+Limes=33300
+Pineapples=47300
+Peaches=34000
+Mangos=900
+Passion fruits=2900
+
+Bananas=47000
+Pears=3100
+Grapes=52650
+Apples=24800
+Oranges=61300
+Limes=49700
+Pineapples=29900
+Peaches=18000
+Mangos=1200
+Passion fruits=800

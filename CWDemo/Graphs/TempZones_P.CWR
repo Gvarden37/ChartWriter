@@ -1,0 +1,217 @@
+﻿ChartWriter CWR
+[PROPERTIES]
+Chart=Chart_TempInndeling
+[Data]
+-20 til -10=0
+-11 til 0=43000
+1 til 10=131000
+11 til 20=102000
+20 til 30=85000
+Over 30=4000
+[EOF]
+-20 til -10=6000
+-11 til 0=69000
+1 til 10=147000
+11 til 20=128000
+20 til 30=15000
+Over 30=0
+[EOF]
+-20 til -10=22000
+-11 til 0=111000
+1 til 10=155000
+11 til 20=77000
+20 til 30=0
+Over 30=0
+[EOF]
+[OBJECTS]
+[PIE]
+Name=piTempinndeling
+PieSize=400
+Slope=0
+DoughnutSize=40
+DiscDepth=-5
+Style=1
+StartAngle=0
+PieSliceSpacing=0
+Font=-16777208,0|0|0|0|,8,Tahoma,1
+SeriesTitleFont=-16777208,0|0|0|0|,8,Tahoma,1
+KeepFontColor=0
+poPrintPercentages=1
+poPrintNames=1
+poClientBorder=1
+poPrintSeriesTitles=1
+poPrintValues=0
+poTextBackground=0
+poPinText=0
+poPrintTitleInDoughnut=0
+poAllowImages=0
+Animation=0
+AnimationSpeed=1
+AnimationPause=0
+[EOF]
+[PIE]
+Name=piTempinndeling
+PieSize=400
+Slope=0
+DoughnutSize=40
+DiscDepth=-5
+Style=1
+StartAngle=0
+PieSliceSpacing=0
+Font=-16777208,0|0|0|0|,8,Tahoma,1
+SeriesTitleFont=-16777208,0|0|0|0|,8,Tahoma,1
+KeepFontColor=0
+poPrintPercentages=1
+poPrintNames=1
+poClientBorder=1
+poPrintSeriesTitles=1
+poPrintValues=0
+poTextBackground=0
+poPinText=0
+poPrintTitleInDoughnut=0
+poAllowImages=0
+Animation=0
+AnimationSpeed=1
+AnimationPause=0
+[EOF]
+[PIE]
+Name=piTempinndeling
+PieSize=400
+Slope=0
+DoughnutSize=40
+DiscDepth=-5
+Style=1
+StartAngle=0
+PieSliceSpacing=0
+Font=-16777208,0|0|0|0|,8,Tahoma,1
+SeriesTitleFont=-16777208,0|0|0|0|,8,Tahoma,1
+KeepFontColor=0
+poPrintPercentages=1
+poPrintNames=1
+poClientBorder=1
+poPrintSeriesTitles=1
+poPrintValues=0
+poTextBackground=0
+poPinText=0
+poPrintTitleInDoughnut=0
+poAllowImages=0
+Animation=0
+AnimationSpeed=1
+AnimationPause=0
+[EOF]
+[LEGENDS]
+{LEGEND0}
+Name=Leg_TempInndeling
+Alignment=0
+Anchoring=4
+Border=1
+Bullets=1
+ColoredText=1
+coSeriesTitle=1
+coValue=1
+coName=1
+coNameSpan=1
+ContentFlow=0
+Enabled=1
+HorizMargins=5
+PointItemIndex=0
+PointName=
+PointLocating=0
+poShowConnectionLine=1
+poThinConnectionLine=0
+poEnlargePoint=1
+PointSeriesIndex=0
+PointValue=
+Transparency=255
+VertMargins=5
+Text=
+Brush=16777215,0
+Font=-16777208,0|0|0|0|,8,Tahoma,1
+[EOF]
+[PIECHART]
+Name=Chart_TempInndeling
+Title=Temperaturinndeling
+SpanType=1
+Percentages=0
+AxisOrientation=0
+WallWidth=0
+WallBorderColor=0
+WallColor=-16777211
+GradientWall=0
+TextTiltThreshold=1
+TitleFont=16711680,0|0|0|0|,12,Tahoma,1
+TitleAlignment=2
+TimeFormat=
+MouseTimeFormat=
+GraphBGColor=16777215
+GraphBorders=1
+toName=0
+toValue=0
+{SERIES0}
+Graph=piTempinndeling
+Title=Max 03.08.2022 - 02.08.2023
+Color=255
+ValueAxis=2
+Visible=1
+{SERIES1}
+Graph=piTempinndeling
+Title=Avg 03.08.2022 - 02.08.2023
+Color=32768
+ValueAxis=2
+Visible=1
+{SERIES2}
+Graph=piTempinndeling
+Title=Min 03.08.2022 - 02.08.2023
+Color=16711680
+ValueAxis=2
+Visible=1
+{ITEMCOLOR0}
+Ident=-20 til -10
+Color=8388608
+{ITEMCOLOR1}
+Ident=-11 til 0
+Color=16711680
+{ITEMCOLOR2}
+Ident=1 til 10
+Color=16711935
+{ITEMCOLOR3}
+Ident=11 til 20
+Color=9089279
+{ITEMCOLOR4}
+Ident=20 til 30
+Color=255
+{ITEMCOLOR5}
+Ident=Over 30
+Color=128
+{NAMESCALE}
+OverflowAction=3
+NumSpanPrecision=0
+Qualifier=
+AllowImages=0
+ShowDividerLines=0
+ShowLabels=1
+Font=-16777208,0|0|0|0|,8,Tahoma,1
+Pen=0,0,1,4
+{VALUESCALE1}
+ValueSpanFromData=0
+ValueIntervals=1
+ValueHigh=1
+ValueLow=0
+ValuePrecision1=0
+Qualifier=
+ShowDividerLines=0
+ShowLabels=1
+Font=-16777208,0|0|0|0|,8,Tahoma,1
+Pen=0,0,1,4
+{VALUESCALE2}
+ValueSpanFromData=0
+ValueIntervals=1
+ValueHigh=155
+ValueLow=0
+ValuePrecision2=0
+Qualifier=
+ShowDividerLines=0
+ShowLabels=1
+Font=-16777208,0|0|0|0|,8,Tahoma,1
+Pen=0,0,1,4
+[EOF]
