@@ -22979,8 +22979,8 @@ var
     G : TCWGraph;
   begin
     G := GetGraphByName(Props.Values[C_Name]);
-    if G = nil then
-    begin
+    if G <> nil then
+      Exit;
     c := TCWCurve.Create(Owner);
     c.Name := SetCompName(Props.Values[C_Name]);
     SetLength(ObjList, Length(ObjList) + 1);
@@ -23003,9 +23003,6 @@ var
     EncodeBrush(c.FAreaBrush, Props.Values[C_CurveBrush]);
     EncodeFont(c.FFont, Props.Values[C_Font]);
     SetAnims(Props, C);
-    end
-    else
-     C := G as TCWCurve;
 
     Indx2 := 0;
     sl := TStringList.Create;
