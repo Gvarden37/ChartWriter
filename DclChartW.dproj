@@ -119,6 +119,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="CompIcons.dcr"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="designIDE.dcp"/>
         <DCCReference Include="ChartW.dcp"/>
