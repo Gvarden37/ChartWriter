@@ -2,6 +2,7 @@
 [TIME TYPE=UNIX]
 [PROPERTIES]
 Chart=Chart_TempOgnedbor
+LiveResize=1
 [Data]
 1659571200=1800
 1659657600=0
@@ -761,6 +762,10 @@ anGrow=0
 Animation=0
 AnimationSpeed=1
 AnimationPause=0
+StatLine=0
+StatBackgroundBlending=0
+StatLineWidth=1
+SMAPeriods=0
 [EOF]
 [CURVE]
 Name=cuTemps
@@ -782,6 +787,10 @@ Animation=0
 AnimationSpeed=1
 AnimationPause=0
 AreaBrush=16771304,0
+StatLine=0
+StatBackgroundBlending=0
+StatLineWidth=1
+SMAPeriods=0
 [EOF]
 [LEGENDS]
 {LEGEND0}
@@ -836,32 +845,32 @@ ShowLines=1
 {SECTION0}
 StartValue=-25000
 EndValue=-10000
-LongCaption=Iskaldt
-ShortCaption=Is
+LongCaption=Freezing cold
+ShortCaption=Freezing
 {SECTION1}
 StartValue=-10000
 EndValue=0
-LongCaption=Kaldt
+LongCaption=Cold
 ShortCaption=
 {SECTION2}
 StartValue=0
 EndValue=10000
-LongCaption=Kjølig
+LongCaption=Chilly
 ShortCaption=
 {SECTION3}
 StartValue=10000
 EndValue=20000
-LongCaption=Middels varmt
-ShortCaption=Middels
+LongCaption=Middle warm
+ShortCaption=Middle
 {SECTION4}
 StartValue=20000
 EndValue=30000
-LongCaption=Varmt
+LongCaption=Warm
 ShortCaption=
 {SECTION5}
 StartValue=30000
 EndValue=35000
-LongCaption=Hett
+LongCaption=Hot
 ShortCaption=
 {SECTION6}
 StartValue=0
@@ -871,7 +880,7 @@ ShortCaption=0
 [EOF]
 [SPANCHART]
 Name=Chart_TempOgnedbor
-Title=Temperatur og nedbør
+Title=Temperatures og precipitation
 SpanType=1
 Percentages=0
 AxisOrientation=0
@@ -890,15 +899,23 @@ GraphBGColor=16777215
 GraphBorders=0
 toName=1
 toValue=0
+InnerLeftMargin=0
+InnerTopMargin=0
+InnerRightMargin=0
+InnerBottomMargin=0
+GraphLeftMargin=0
+GraphTopMargin=0
+GraphRightMargin=0
+GraphBottomMargin=0
 {SERIES0}
 Graph=Weather
-Title=Nedbør
+Title=Precipitation
 Color=16711680
 ValueAxis=0
 Visible=1
 {SERIES1}
 Graph=cuTemps
-Title=Temperatur
+Title=Temperatures
 Color=255
 ValueAxis=1
 Visible=1
@@ -908,6 +925,7 @@ NumSpanPrecision=0
 AllowImages=1
 Qualifier=
 ShowDividerLines=0
+MinLabelSpacing=5
 ShowLabels=1
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
@@ -919,17 +937,19 @@ ValueLow=0
 ValuePrecision1=1
 Qualifier=
 ShowDividerLines=0
+MinLabelSpacing=5
 ShowLabels=1
 Font=16711680,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 {VALUESCALE2}
 ValueSpanFromData=0
-ValueIntervals=1
+ValueIntervals=1000
 ValueHigh=35000
 ValueLow=-25000
 ValuePrecision2=0
 Qualifier=
 ShowDividerLines=0
+MinLabelSpacing=5
 ShowLabels=1
 Font=255,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4

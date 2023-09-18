@@ -1,6 +1,7 @@
 ﻿ChartWriter CWR
 [PROPERTIES]
 Chart=C_577
+LiveResize=1
 [Data]
 0=50000
 50=51000
@@ -412,7 +413,7 @@ Name=Curve_577
 LineStyle=0
 Style=0
 LineWidth=1
-LineShape=1
+LineShape=0
 SmoothLines=1
 AreaOutline=1
 AreaOutlineColor=0
@@ -426,6 +427,10 @@ KeepFontColor=0
 Animation=0
 AnimationSpeed=1
 AnimationPause=0
+StatLine=0
+StatLineWidth=1
+SMAPeriods=0
+StatBackgroundBlending=0
 AreaBrush=16777215,0
 {STYLE0}
 Ident=Elevation
@@ -443,7 +448,7 @@ Name=Curve_577
 LineStyle=0
 Style=0
 LineWidth=1
-LineShape=1
+LineShape=0
 SmoothLines=1
 AreaOutline=1
 AreaOutlineColor=0
@@ -457,6 +462,10 @@ KeepFontColor=0
 Animation=0
 AnimationSpeed=1
 AnimationPause=0
+StatLine=0
+StatLineWidth=1
+SMAPeriods=0
+StatBackgroundBlending=0
 AreaBrush=16777215,0
 {STYLE0}
 Ident=Elevation
@@ -471,7 +480,7 @@ LineWidth=2
 [EOF]
 [SPANCHART]
 Name=C_577
-Title=Runner
+Title=Hill runner
 SpanType=5
 Percentages=0
 AxisOrientation=0
@@ -488,6 +497,14 @@ GraphBGColor=-16777211
 GraphBorders=0
 toName=0
 toValue=0
+InnerLeftMargin=0
+InnerTopMargin=0
+InnerRightMargin=0
+InnerBottomMargin=0
+GraphLeftMargin=0
+GraphTopMargin=0
+GraphRightMargin=0
+GraphBottomMargin=0
 {SERIES0}
 Graph=Curve_577
 Title=Elevation
@@ -507,6 +524,7 @@ AllowImages=1
 Qualifier=Km
 ShowDividerLines=0
 ShowLabels=1
+MinLabelSpacing=5
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 {VALUESCALE1}
@@ -518,6 +536,7 @@ ValuePrecision1=0
 Qualifier=Elevation (meters)
 ShowDividerLines=0
 ShowLabels=1
+MinLabelSpacing=10
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 {VALUESCALE2}
@@ -529,6 +548,7 @@ ValuePrecision2=1
 Qualifier=Speed (km/h)
 ShowDividerLines=0
 ShowLabels=1
+MinLabelSpacing=5
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 [EOF]

@@ -9,6 +9,9 @@
         <Projects Include="..\GraphWriter\ChartW.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="..\GraphWriter\DclChartW.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -35,14 +38,23 @@
     <Target Name="ChartW:Make">
         <MSBuild Projects="..\GraphWriter\ChartW.dproj" Targets="Make"/>
     </Target>
+    <Target Name="DclChartW">
+        <MSBuild Projects="..\GraphWriter\DclChartW.dproj"/>
+    </Target>
+    <Target Name="DclChartW:Clean">
+        <MSBuild Projects="..\GraphWriter\DclChartW.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DclChartW:Make">
+        <MSBuild Projects="..\GraphWriter\DclChartW.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="CWDemo;ChartW"/>
+        <CallTarget Targets="CWDemo;ChartW;DclChartW"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="CWDemo:Clean;ChartW:Clean"/>
+        <CallTarget Targets="CWDemo:Clean;ChartW:Clean;DclChartW:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="CWDemo:Make;ChartW:Make"/>
+        <CallTarget Targets="CWDemo:Make;ChartW:Make;DclChartW:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

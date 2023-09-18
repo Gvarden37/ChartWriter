@@ -15,6 +15,7 @@ object form_main: Tform_main
   Position = poScreenCenter
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnHelp = FormHelp
   PixelsPerInch = 96
   TextHeight = 13
   object lbNLabelFont: TLabel
@@ -122,9 +123,9 @@ object form_main: Tform_main
     end
     object pgGraphs: TPageControl
       Left = 1
-      Top = 273
+      Top = 291
       Width = 418
-      Height = 469
+      Height = 451
       ActivePage = Curve
       Align = alClient
       ParentShowHint = False
@@ -154,13 +155,6 @@ object form_main: Tform_main
           Height = 13
           Caption = 'Max. point spacing'
         end
-        object Label52: TLabel
-          Left = 1
-          Top = 344
-          Width = 62
-          Height = 13
-          Caption = 'Statistic lines'
-        end
         object Label53: TLabel
           Left = 2
           Top = 318
@@ -169,15 +163,15 @@ object form_main: Tform_main
           Caption = 'Point markers'
         end
         object sbFont: TSpeedButton
-          Left = 1
-          Top = 371
+          Left = 2
+          Top = 340
           Width = 79
           Height = 22
           Action = acCurveFont
         end
         object lbCurveFontName: TLabel
-          Left = 95
-          Top = 374
+          Left = 96
+          Top = 343
           Width = 47
           Height = 13
           Caption = 'Tahoma 8'
@@ -273,6 +267,7 @@ object form_main: Tform_main
             Top = 94
             Width = 134
             Height = 21
+            HelpContext = 296
             Style = csDropDownList
             ItemIndex = 0
             TabOrder = 1
@@ -290,6 +285,7 @@ object form_main: Tform_main
             Top = 121
             Width = 134
             Height = 21
+            HelpContext = 292
             Style = csDropDownList
             ItemIndex = 0
             TabOrder = 2
@@ -304,6 +300,7 @@ object form_main: Tform_main
             Top = 148
             Width = 25
             Height = 21
+            HelpContext = 295
             MaxLength = 1
             NumbersOnly = True
             TabOrder = 3
@@ -314,6 +311,8 @@ object form_main: Tform_main
             Top = 24
             Width = 136
             Height = 65
+            Hint = 'The sereies that will be affected by the styles'
+            HelpContext = 61
             ItemHeight = 13
             TabOrder = 0
             OnClick = lbApplyOnClick
@@ -325,9 +324,10 @@ object form_main: Tform_main
           Width = 97
           Height = 17
           Hint = 'Run animation'
+          HelpContext = 427
           Alignment = taLeftJustify
           Caption = 'Animation'
-          TabOrder = 9
+          TabOrder = 8
           OnClick = cbxCurveAnimationClick
         end
         object cbCurveAnimationSpeed: TComboBox
@@ -335,9 +335,10 @@ object form_main: Tform_main
           Top = 170
           Width = 100
           Height = 21
+          HelpContext = 331
           Style = csDropDownList
           ItemIndex = 1
-          TabOrder = 10
+          TabOrder = 9
           Text = 'Medium fast'
           OnChange = cbCurvePointMarkersChange
           Items.Strings = (
@@ -352,6 +353,7 @@ object form_main: Tform_main
           Width = 65
           Height = 21
           Hint = 'Minimum space in pixels between the  points. 0 = compressed'
+          HelpContext = 57
           TabOrder = 2
           OnExit = cbCurvePointMarkersChange
         end
@@ -361,6 +363,7 @@ object form_main: Tform_main
           Width = 65
           Height = 21
           Hint = 'Max space in pixels between the points. 0 = no limit'
+          HelpContext = 56
           TabOrder = 3
           OnExit = cbCurvePointMarkersChange
         end
@@ -370,28 +373,11 @@ object form_main: Tform_main
           Width = 106
           Height = 17
           Hint = 'Displays a rolling point parker, following the mouse'
+          HelpContext = 179
           Alignment = taLeftJustify
           Caption = 'Beacon points'
           TabOrder = 4
           OnClick = cbxCurveBeaconPointsClick
-        end
-        object cbCurveStatLine: TComboBox
-          Left = 95
-          Top = 341
-          Width = 101
-          Height = 21
-          Hint = 'Displays lines based on some som kind of statistics'
-          Style = csDropDownList
-          ItemIndex = 0
-          TabOrder = 6
-          Text = 'None'
-          OnChange = cbCurvePointMarkersChange
-          Items.Strings = (
-            'None'
-            'Mean'
-            'Median'
-            'Linear regression'
-            'Mode')
         end
         object cbCurvePointMarkers: TComboBox
           Left = 95
@@ -399,6 +385,7 @@ object form_main: Tform_main
           Width = 101
           Height = 22
           Hint = 'Images or text that marks up the points'
+          HelpContext = 53
           Style = csDropDownList
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clWindowText
@@ -414,6 +401,8 @@ object form_main: Tform_main
             'None'
             'Small ball'
             'Big ball'
+            'Small concentric'
+            'Big concentric'
             'Dot'
             'Text')
         end
@@ -425,7 +414,8 @@ object form_main: Tform_main
           Hint = 
             'Pauses animation between each series. -1 = manual pause. Mouse c' +
             'lick resumes.'
-          TabOrder = 11
+          HelpContext = 340
+          TabOrder = 10
         end
         object GroupBox1: TGroupBox
           Left = 207
@@ -433,7 +423,7 @@ object form_main: Tform_main
           Width = 200
           Height = 137
           Caption = 'Area  styles options'
-          TabOrder = 8
+          TabOrder = 7
           object Label49: TLabel
             Left = 7
             Top = 106
@@ -463,6 +453,7 @@ object form_main: Tform_main
             Width = 65
             Height = 21
             Hint = 'Value that defines the base line split'
+            HelpContext = 16
             TabOrder = 3
             OnExit = cbCurvePointMarkersChange
           end
@@ -472,6 +463,7 @@ object form_main: Tform_main
             Width = 108
             Height = 22
             Hint = 'Color of neighboring area'
+            HelpContext = 45
             Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
             TabOrder = 0
             OnChange = cbNeighborAreaColorChange
@@ -482,6 +474,7 @@ object form_main: Tform_main
             Width = 91
             Height = 17
             Hint = 'Draws a border around the area'
+            HelpContext = 313
             Alignment = taLeftJustify
             Caption = 'Area outline'
             TabOrder = 1
@@ -492,20 +485,21 @@ object form_main: Tform_main
             Top = 75
             Width = 108
             Height = 22
+            HelpContext = 260
             Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
             TabOrder = 2
             OnChange = cbNeighborAreaColorChange
           end
         end
         object cbxCurveKeepFontColor: TCheckBox
-          Left = 1
-          Top = 396
+          Left = 2
+          Top = 365
           Width = 108
           Height = 17
           Hint = 'Overrides font color adaption, keeping the color of Text font.'
           Alignment = taLeftJustify
           Caption = 'Keep font color'
-          TabOrder = 7
+          TabOrder = 6
           OnClick = cbxCurveKeepFontColorClick
         end
         object cbLineShape: TComboBox
@@ -513,7 +507,8 @@ object form_main: Tform_main
           Top = 215
           Width = 66
           Height = 22
-          Hint = 'Images or text that marks up the points'
+          Hint = 'Shape of line'
+          HelpContext = 71
           Style = csDropDownList
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clWindowText
@@ -586,15 +581,15 @@ object form_main: Tform_main
           Caption = 'Cube depth'
         end
         object sbBarTextFont: TSpeedButton
-          Left = 2
-          Top = 373
+          Left = 210
+          Top = 261
           Width = 71
           Height = 22
           Action = acCurveFont
         end
         object lbBarFont: TLabel
-          Left = 85
-          Top = 376
+          Left = 293
+          Top = 264
           Width = 47
           Height = 13
           Caption = 'Tahoma 8'
@@ -604,6 +599,7 @@ object form_main: Tform_main
           Top = 5
           Width = 114
           Height = 21
+          HelpContext = 332
           Style = csDropDownList
           ItemIndex = 0
           TabOrder = 0
@@ -621,6 +617,7 @@ object form_main: Tform_main
           Top = 76
           Width = 41
           Height = 21
+          HelpContext = 19
           Alignment = taRightJustify
           NumbersOnly = True
           TabOrder = 3
@@ -632,6 +629,7 @@ object form_main: Tform_main
           Top = 30
           Width = 114
           Height = 21
+          HelpContext = 18
           Style = csDropDownList
           ItemIndex = 0
           TabOrder = 1
@@ -647,6 +645,7 @@ object form_main: Tform_main
           Width = 41
           Height = 21
           Hint = 'Space between the series items'
+          HelpContext = 17
           Alignment = taRightJustify
           NumbersOnly = True
           TabOrder = 4
@@ -669,9 +668,10 @@ object form_main: Tform_main
           Top = 3
           Width = 33
           Height = 21
+          HelpContext = 266
           Alignment = taRightJustify
           NumbersOnly = True
-          TabOrder = 10
+          TabOrder = 8
           Text = '45'
           OnExit = lbxBarOptionsClickCheck
         end
@@ -680,9 +680,10 @@ object form_main: Tform_main
           Top = 3
           Width = 33
           Height = 21
+          HelpContext = 334
           Alignment = taRightJustify
           NumbersOnly = True
-          TabOrder = 11
+          TabOrder = 9
           Text = '0'
           OnExit = lbxBarOptionsClickCheck
         end
@@ -691,6 +692,7 @@ object form_main: Tform_main
           Top = 54
           Width = 84
           Height = 17
+          HelpContext = 14
           Alignment = taLeftJustify
           Caption = 'Horizontal'
           TabOrder = 2
@@ -700,19 +702,19 @@ object form_main: Tform_main
           Left = -1
           Top = 176
           Width = 205
-          Height = 169
+          Height = 225
           Caption = 'Elements'
           TabOrder = 7
           object Label65: TLabel
-            Left = 4
-            Top = 92
+            Left = 2
+            Top = 102
             Width = 44
             Height = 13
             Caption = 'Bar texts'
           end
           object Label66: TLabel
-            Left = 3
-            Top = 70
+            Left = 2
+            Top = 80
             Width = 71
             Height = 13
             Caption = 'Base line value'
@@ -722,24 +724,27 @@ object form_main: Tform_main
             Left = 85
             Top = 16
             Width = 114
-            Height = 49
+            Height = 57
             Hint = 'Optional add ins'
+            HelpContext = 42
             OnClickCheck = lbxBarOptionsClickCheck
             ItemHeight = 13
             Items.Strings = (
               'Base line split'
               'Bar outlines'
-              'Bar texts')
+              'Bar texts'
+              'Bar images')
             TabOrder = 0
           end
           object lbxBarTexts: TCheckListBox
-            Left = 85
-            Top = 92
+            Left = 83
+            Top = 102
             Width = 114
-            Height = 66
+            Height = 60
             Hint = 
               'Prints bar texts, if space allows. Bar texts in Elements must be' +
               ' checked'
+            HelpContext = 5
             OnClickCheck = lbxBarOptionsClickCheck
             ItemHeight = 13
             Items.Strings = (
@@ -750,11 +755,12 @@ object form_main: Tform_main
             TabOrder = 2
           end
           object eBarBaselineValue: TEdit
-            Left = 85
-            Top = 67
+            Left = 84
+            Top = 77
             Width = 41
             Height = 21
             Hint = 'Value that defines the base line split'
+            HelpContext = 41
             TabOrder = 1
             OnExit = lbxBarOptionsClickCheck
           end
@@ -768,7 +774,7 @@ object form_main: Tform_main
           Color = clCream
           ParentBackground = False
           ParentColor = False
-          TabOrder = 12
+          TabOrder = 10
           object lbBarAnimationSpeed: TLabel
             Left = 7
             Top = 57
@@ -830,6 +836,7 @@ object form_main: Tform_main
             Top = 54
             Width = 100
             Height = 21
+            HelpContext = 331
             Style = csDropDownList
             ItemIndex = 1
             TabOrder = 2
@@ -848,6 +855,7 @@ object form_main: Tform_main
             Hint = 
               'Pauses animation between each series. -1 = manual pause. Mouse c' +
               'lick resumes.'
+            HelpContext = 340
             NumbersOnly = True
             TabOrder = 3
             Text = '0'
@@ -857,6 +865,7 @@ object form_main: Tform_main
             Top = 14
             Width = 100
             Height = 35
+            HelpContext = 310
             ItemHeight = 13
             Items.Strings = (
               'Flow'
@@ -871,6 +880,7 @@ object form_main: Tform_main
             Hint = 
               'Adds extra speed. Range from -5 to 5 (negative values slows down' +
               ')'
+            HelpContext = 319
             MaxValue = 5
             MinValue = -5
             TabOrder = 1
@@ -879,11 +889,11 @@ object form_main: Tform_main
         end
         object GroupBox3: TGroupBox
           Left = 210
-          Top = 239
+          Top = 318
           Width = 187
           Height = 82
           Caption = 'Note'
-          TabOrder = 13
+          TabOrder = 11
           object Label47: TLabel
             Left = 2
             Top = 15
@@ -905,14 +915,15 @@ object form_main: Tform_main
           Top = 150
           Width = 83
           Height = 17
+          HelpContext = 465
           Alignment = taLeftJustify
           Caption = 'Auto size'
           TabOrder = 6
           OnClick = cbxAutoSizeClick
         end
         object cbxShowQualifier: TCheckBox
-          Left = 3
-          Top = 350
+          Left = 211
+          Top = 238
           Width = 93
           Height = 17
           Hint = 
@@ -920,18 +931,19 @@ object form_main: Tform_main
             ')'
           Alignment = taLeftJustify
           Caption = 'Show qualifier'
-          TabOrder = 8
+          TabOrder = 12
           OnClick = lbxBarOptionsClickCheck
         end
         object cbxBarKeepFontColor: TCheckBox
-          Left = 3
-          Top = 397
+          Left = 211
+          Top = 285
           Width = 93
           Height = 17
           Hint = 'Overrides font color adaption, keeping the color of Text font.'
+          HelpContext = 430
           Alignment = taLeftJustify
           Caption = 'Keep font color'
-          TabOrder = 9
+          TabOrder = 13
           OnClick = cbxCurveKeepFontColorClick
         end
       end
@@ -1110,6 +1122,7 @@ object form_main: Tform_main
           Width = 57
           Height = 21
           Hint = 'Number of value decimals '
+          HelpContext = 439
           Alignment = taRightJustify
           NumbersOnly = True
           TabOrder = 7
@@ -1120,6 +1133,7 @@ object form_main: Tform_main
           Top = 11
           Width = 91
           Height = 21
+          HelpContext = 423
           Style = csDropDownList
           ItemIndex = 0
           TabOrder = 0
@@ -1135,6 +1149,7 @@ object form_main: Tform_main
           Width = 97
           Height = 17
           Hint = 'Starts animation'
+          HelpContext = 427
           Alignment = taLeftJustify
           Caption = 'Animation'
           TabOrder = 10
@@ -1145,6 +1160,7 @@ object form_main: Tform_main
           Top = 240
           Width = 83
           Height = 21
+          HelpContext = 331
           Style = csDropDownList
           ItemIndex = 1
           TabOrder = 11
@@ -1164,6 +1180,7 @@ object form_main: Tform_main
           Hint = 
             'Delay between each slice paint in milliseconds. -1 = Manual stop' +
             '/resume'
+          HelpContext = 340
           TabOrder = 12
           OnExit = cbPieStyleChange
         end
@@ -1172,6 +1189,7 @@ object form_main: Tform_main
           Top = 20
           Width = 136
           Height = 113
+          HelpContext = 197
           OnClickCheck = cbPieStyleChange
           ItemHeight = 13
           Items.Strings = (
@@ -1191,6 +1209,7 @@ object form_main: Tform_main
           Width = 57
           Height = 21
           Hint = 'Maximum size of pie.'
+          HelpContext = 51
           NumbersOnly = True
           TabOrder = 1
           OnExit = cbPieStyleChange
@@ -1201,6 +1220,7 @@ object form_main: Tform_main
           Width = 57
           Height = 21
           Hint = 'Size of doughnut ellipse, in percentage of pie diameter'
+          HelpContext = 189
           NumbersOnly = True
           TabOrder = 2
           OnExit = cbPieStyleChange
@@ -1211,6 +1231,7 @@ object form_main: Tform_main
           Width = 57
           Height = 21
           Hint = 'Start angle of first pie slice'
+          HelpContext = 424
           NumbersOnly = True
           TabOrder = 3
           OnExit = cbPieStyleChange
@@ -1221,6 +1242,7 @@ object form_main: Tform_main
           Width = 57
           Height = 21
           Hint = 'Tilts the pie by the given degrees'
+          HelpContext = 422
           NumbersOnly = True
           TabOrder = 6
           OnExit = cbPieStyleChange
@@ -1231,6 +1253,7 @@ object form_main: Tform_main
           Width = 57
           Height = 21
           Hint = 'Spacing between pie slices, in degrees'
+          HelpContext = 124
           TabOrder = 4
           OnExit = cbPieStyleChange
         end
@@ -1242,6 +1265,7 @@ object form_main: Tform_main
           Hint = 
             'Disc thickness.  Neg. values means percentage of major axis widt' +
             'h'
+          HelpContext = 425
           TabOrder = 5
           OnExit = cbPieStyleChange
         end
@@ -1251,10 +1275,98 @@ object form_main: Tform_main
           Width = 97
           Height = 17
           Hint = 'Overrides font color adaption, keeping the color of Text font.'
+          HelpContext = 430
           Alignment = taLeftJustify
           Caption = 'Keep font color'
           TabOrder = 9
           OnClick = cbxCurveKeepFontColorClick
+        end
+      end
+      object tabStats: TTabSheet
+        Caption = 'Statistics'
+        ImageIndex = 3
+        object Label52: TLabel
+          Left = 14
+          Top = 16
+          Width = 62
+          Height = 13
+          Caption = 'Statistic lines'
+        end
+        object Label110: TLabel
+          Left = 14
+          Top = 43
+          Width = 59
+          Height = 26
+          Caption = 'Background blending'
+          WordWrap = True
+        end
+        object Label111: TLabel
+          Left = 13
+          Top = 112
+          Width = 59
+          Height = 13
+          Caption = 'SMA periods'
+        end
+        object Label112: TLabel
+          Left = 14
+          Top = 86
+          Width = 48
+          Height = 13
+          Caption = 'Line width'
+        end
+        object cbCurveStatLine: TComboBox
+          Left = 108
+          Top = 13
+          Width = 133
+          Height = 21
+          Hint = 'Displays lines based on some som kind of statistics'
+          HelpContext = 58
+          Style = csDropDownList
+          ItemIndex = 0
+          TabOrder = 0
+          Text = 'None'
+          OnChange = cbCurveStatLineChange
+          Items.Strings = (
+            'None'
+            'Mean'
+            'Median'
+            'Linear regression'
+            'Mode'
+            'Simple moving average ')
+        end
+        object eSMAPeriods: TEdit
+          Left = 108
+          Top = 109
+          Width = 51
+          Height = 21
+          HelpContext = 526
+          NumbersOnly = True
+          TabOrder = 3
+          Text = '0'
+          OnExit = eSMAPeriodsExit
+        end
+        object eStatLineWidth: TSpinEdit
+          Left = 109
+          Top = 83
+          Width = 48
+          Height = 22
+          HelpContext = 529
+          MaxValue = 3
+          MinValue = 1
+          TabOrder = 2
+          Value = 1
+          OnChange = eStatLineWidthChange
+        end
+        object tbStatBGBlending: TTrackBar
+          Left = 101
+          Top = 43
+          Width = 150
+          Height = 39
+          HelpContext = 527
+          Max = 128
+          Frequency = 5
+          TabOrder = 1
+          OnChange = tbStatBGBlendingChange
         end
       end
     end
@@ -1262,7 +1374,7 @@ object form_main: Tform_main
       Left = 1
       Top = 1
       Width = 418
-      Height = 272
+      Height = 290
       ActivePage = tabChartDefs
       Align = alTop
       Font.Charset = DEFAULT_CHARSET
@@ -1278,8 +1390,8 @@ object form_main: Tform_main
           Left = 0
           Top = 0
           Width = 410
-          Height = 244
-          Hint = 'The graph that draws the series'
+          Height = 262
+          HelpContext = 309
           ActivePage = tabChartGeneral
           Align = alClient
           Enabled = False
@@ -1294,7 +1406,7 @@ object form_main: Tform_main
             ShowHint = True
             object Label16: TLabel
               Left = 2
-              Top = 108
+              Top = 131
               Width = 20
               Height = 13
               Caption = 'Title'
@@ -1320,7 +1432,7 @@ object form_main: Tform_main
             end
             object Label90: TLabel
               Left = 3
-              Top = 183
+              Top = 206
               Width = 56
               Height = 26
               Caption = 'Background clolor'
@@ -1328,55 +1440,56 @@ object form_main: Tform_main
             end
             object SpeedButton6: TSpeedButton
               Left = 139
-              Top = 158
+              Top = 181
               Width = 33
               Height = 22
               Action = acChartTitleFont
             end
             object lbTitleFont: TLabel
               Left = 81
-              Top = 162
+              Top = 185
               Width = 47
               Height = 13
               Caption = 'Tahoma 8'
             end
             object Label92: TLabel
               Left = 1
-              Top = 135
+              Top = 158
               Width = 47
               Height = 13
               Caption = 'Alignment'
             end
             object Label102: TLabel
               Left = 3
-              Top = 162
+              Top = 185
               Width = 22
               Height = 13
               Caption = 'Font'
             end
             object eChartTitle: TEdit
               Left = 81
-              Top = 105
+              Top = 128
               Width = 304
               Height = 21
+              HelpContext = 312
               TabOrder = 1
               OnExit = eChartTitleExit
             end
             object lbCharts: TListBox
               Left = 81
-              Top = 3
+              Top = 6
               Width = 304
-              Height = 94
-              Hint = 'The series that will be affected by the styles'
+              Height = 116
               ItemHeight = 13
               TabOrder = 0
               OnClick = lbChartsClick
             end
             object cbBGColor: TColorBox
               Left = 82
-              Top = 184
+              Top = 207
               Width = 152
               Height = 22
+              HelpContext = 27
               Selected = clWindow
               Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
               TabOrder = 3
@@ -1384,9 +1497,10 @@ object form_main: Tform_main
             end
             object cbTitleAlignment: TComboBox
               Left = 82
-              Top = 132
+              Top = 155
               Width = 90
               Height = 21
+              HelpContext = 337
               Style = csDropDownList
               TabOrder = 2
               OnChange = cbTitleAlignmentChange
@@ -1450,6 +1564,7 @@ object form_main: Tform_main
               Hint = 
                 'Series color. Affects the curve lines or bars that draws the ser' +
                 'ies'
+              HelpContext = 413
               Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
               TabOrder = 3
               OnChange = cbChartSeriesColorChange
@@ -1459,6 +1574,8 @@ object form_main: Tform_main
               Top = 2
               Width = 205
               Height = 21
+              HelpType = htKeyword
+              HelpKeyword = '412'
               TabOrder = 1
               OnExit = eSeriesTitleExit
             end
@@ -1467,6 +1584,7 @@ object form_main: Tform_main
               Top = 163
               Width = 83
               Height = 17
+              HelpContext = 415
               TabStop = False
               Alignment = taLeftJustify
               Caption = 'Visible'
@@ -1479,7 +1597,7 @@ object form_main: Tform_main
               Left = 0
               Top = 0
               Width = 121
-              Height = 216
+              Height = 234
               Align = alLeft
               ItemHeight = 13
               PopupMenu = pmSeries
@@ -1492,6 +1610,7 @@ object form_main: Tform_main
               Width = 120
               Height = 21
               Hint = 'Points to the value scale configuration (scales tab)'
+              HelpContext = 414
               Style = csDropDownList
               ItemIndex = 0
               TabOrder = 4
@@ -1506,6 +1625,7 @@ object form_main: Tform_main
               Width = 105
               Height = 21
               Hint = 'Kind of values in the series, real numbers or percentages'
+              HelpContext = 446
               Style = csDropDownList
               ItemIndex = 0
               TabOrder = 6
@@ -1520,6 +1640,7 @@ object form_main: Tform_main
               Top = 27
               Width = 120
               Height = 21
+              HelpContext = 411
               Style = csDropDownList
               TabOrder = 2
               OnChange = cbSeriesGraphTypeChange
@@ -1546,11 +1667,37 @@ object form_main: Tform_main
               Height = 13
               Caption = 'Color'
             end
+            object imgLabel: TImage
+              Left = 208
+              Top = 64
+              Width = 64
+              Height = 65
+              Hint = 'Image appearing as labels on the name scale'
+              Center = True
+              Transparent = True
+            end
+            object Label109: TLabel
+              Left = 160
+              Top = 64
+              Width = 30
+              Height = 26
+              Caption = 'Label Image'
+              WordWrap = True
+            end
+            object SpeedButton2: TSpeedButton
+              Left = 160
+              Top = 96
+              Width = 27
+              Height = 22
+              Caption = '...'
+              OnClick = SpeedButton2Click
+            end
             object lbItems: TListBox
               Left = 0
               Top = 0
               Width = 153
-              Height = 216
+              Height = 234
+              HelpContext = 308
               Style = lbOwnerDrawFixed
               Align = alLeft
               ItemHeight = 13
@@ -1567,6 +1714,7 @@ object form_main: Tform_main
               Hint = 
                 'Color of the bar or pie slice that is associated with the catego' +
                 'ry'
+              HelpContext = 281
               Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
               TabOrder = 2
               OnChange = cbChartItemColorChange
@@ -1577,6 +1725,7 @@ object form_main: Tform_main
               Width = 171
               Height = 21
               Hint = 'Name of category'
+              HelpContext = 282
               TabOrder = 1
               OnExit = eItemNameExit
             end
@@ -1588,7 +1737,7 @@ object form_main: Tform_main
               Left = 0
               Top = 0
               Width = 402
-              Height = 216
+              Height = 234
               ActivePage = tabNameScale
               Align = alClient
               Style = tsFlatButtons
@@ -1623,8 +1772,8 @@ object form_main: Tform_main
                   Top = 2
                   Width = 105
                   Height = 21
-                  HelpType = htKeyword
                   HelpKeyword = 'The type of span associated with a span chart.'
+                  HelpContext = 324
                   Style = csDropDownList
                   Enabled = False
                   ItemIndex = 6
@@ -1647,6 +1796,7 @@ object form_main: Tform_main
                   Hint = 
                     'Defines the precision of the numbers in span is a number span ch' +
                     'art'
+                  HelpContext = 323
                   Alignment = taRightJustify
                   TabOrder = 1
                   OnExit = eNamePrecisionExit
@@ -1659,6 +1809,7 @@ object form_main: Tform_main
                   Hint = 
                     'Action to take when there is not enough space to render the diag' +
                     'ram completely'
+                  HelpContext = 23
                   Style = csDropDownList
                   ItemIndex = 3
                   TabOrder = 2
@@ -1679,21 +1830,34 @@ object form_main: Tform_main
                   ExplicitTop = 73
                   inherited cbxShowDividerLines: TCheckBox
                     Hint = 'Shows hides the name divider lines'
+                    HelpContext = 488
                     Caption = 'Show dividerlines'
                   end
                   inherited cbxShowLabels: TCheckBox
                     Left = 7
                     Hint = 'Shows / hides the name labels'
+                    HelpContext = 491
                     ExplicitLeft = 7
                   end
                   inherited eQualifier: TEdit
                     Hint = 'Name qualifier'
+                    HelpContext = 173
                   end
                   inherited ActionList1: TActionList
                     Images = ImageList1
                     Left = 232
                     Top = 82
                   end
+                end
+                object cbxImageLabels: TCheckBox
+                  Left = 6
+                  Top = 180
+                  Width = 110
+                  Height = 17
+                  Alignment = taLeftJustify
+                  Caption = 'Image labels'
+                  TabOrder = 4
+                  OnClick = cbxImageLabelsClick
                 end
               end
               object tabValueScale: TTabSheet
@@ -1732,6 +1896,7 @@ object form_main: Tform_main
                   Width = 66
                   Height = 21
                   Hint = 'Highest value of scale'
+                  HelpContext = 325
                   Alignment = taRightJustify
                   TabOrder = 0
                   OnExit = eHighValueExit
@@ -1742,6 +1907,7 @@ object form_main: Tform_main
                   Width = 66
                   Height = 21
                   Hint = 'Lowest value of scale'
+                  HelpContext = 326
                   Alignment = taRightJustify
                   TabOrder = 1
                   OnExit = eLowValueExit
@@ -1754,6 +1920,7 @@ object form_main: Tform_main
                   Hint = 
                     'Uses the high/low values in the series data as the upper and low' +
                     'er boundaries'
+                  HelpContext = 328
                   Alignment = taLeftJustify
                   Caption = 'Get high/low from data'
                   TabOrder = 2
@@ -1765,6 +1932,7 @@ object form_main: Tform_main
                   Width = 46
                   Height = 21
                   Hint = 'Minimum value intervals in scale'
+                  HelpContext = 327
                   Alignment = taRightJustify
                   TabOrder = 3
                   Text = '1'
@@ -1776,6 +1944,7 @@ object form_main: Tform_main
                   Width = 45
                   Height = 21
                   Hint = 'Max number of value decimals'
+                  HelpContext = 72
                   Alignment = taRightJustify
                   TabOrder = 4
                   OnExit = ePrecision1Exit
@@ -1814,6 +1983,7 @@ object form_main: Tform_main
                   inherited cbxShowDividerLines: TCheckBox
                     Left = 11
                     Width = 109
+                    HelpContext = 488
                     ExplicitLeft = 11
                     ExplicitWidth = 109
                   end
@@ -1821,9 +1991,14 @@ object form_main: Tform_main
                     Left = 12
                     Top = 25
                     Width = 106
+                    HelpType = htKeyword
+                    HelpKeyword = '491'
                     ExplicitLeft = 12
                     ExplicitTop = 25
                     ExplicitWidth = 106
+                  end
+                  inherited eQualifier: TEdit
+                    HelpContext = 173
                   end
                   inherited ActionList1: TActionList
                     Images = ImageList1
@@ -1867,6 +2042,7 @@ object form_main: Tform_main
                   Width = 66
                   Height = 21
                   Hint = 'Highest value of scale'
+                  HelpContext = 325
                   Alignment = taRightJustify
                   TabOrder = 0
                   OnExit = eHighValueExit
@@ -1877,6 +2053,7 @@ object form_main: Tform_main
                   Width = 66
                   Height = 21
                   Hint = 'Lowest value of scale'
+                  HelpContext = 326
                   Alignment = taRightJustify
                   TabOrder = 1
                   OnExit = eLowValueExit
@@ -1889,6 +2066,7 @@ object form_main: Tform_main
                   Hint = 
                     'Uses the high/low values in the series data as the upper and low' +
                     'er boundaries'
+                  HelpContext = 328
                   Alignment = taLeftJustify
                   Caption = 'Get high/low from data'
                   TabOrder = 2
@@ -1900,6 +2078,7 @@ object form_main: Tform_main
                   Width = 68
                   Height = 21
                   Hint = 'Minimum value intervals in scale'
+                  HelpContext = 327
                   Alignment = taRightJustify
                   TabOrder = 3
                   Text = '1'
@@ -1911,6 +2090,7 @@ object form_main: Tform_main
                   Width = 45
                   Height = 21
                   Hint = 'Maximum nuber of value decimals'
+                  HelpContext = 72
                   Alignment = taRightJustify
                   NumbersOnly = True
                   TabOrder = 4
@@ -1944,10 +2124,16 @@ object form_main: Tform_main
                   end
                   inherited cbxShowDividerLines: TCheckBox
                     Left = 8
+                    HelpContext = 488
                     ExplicitLeft = 8
+                  end
+                  inherited cbxShowLabels: TCheckBox
+                    HelpType = htKeyword
+                    HelpKeyword = '491'
                   end
                   inherited eQualifier: TEdit
                     Width = 177
+                    HelpContext = 173
                     ExplicitWidth = 177
                   end
                   inherited ActionList1: TActionList
@@ -2023,6 +2209,7 @@ object form_main: Tform_main
               Width = 162
               Height = 21
               Hint = 'Turns the axes around the clock'
+              HelpContext = 14
               Style = csDropDownList
               ItemIndex = 0
               TabOrder = 0
@@ -2044,6 +2231,7 @@ object form_main: Tform_main
               Width = 112
               Height = 22
               Hint = 'Wall border color'
+              HelpContext = 525
               Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
               TabOrder = 3
               OnChange = cbAxisColorChange
@@ -2054,6 +2242,7 @@ object form_main: Tform_main
               Width = 107
               Height = 48
               Hint = 'Activates label tilting for the selected label types'
+              HelpContext = 48
               OnClickCheck = lbxTextTiltingClickCheck
               ItemHeight = 13
               Items.Strings = (
@@ -2070,6 +2259,7 @@ object form_main: Tform_main
               Hint = 
                 'Paints the wall background color as a gradient of wall color and' +
                 ' graph color'
+              HelpContext = 305
               Alignment = taLeftJustify
               Caption = 'Gradient wall'
               TabOrder = 4
@@ -2082,6 +2272,7 @@ object form_main: Tform_main
               Width = 43
               Height = 21
               Hint = 'Width of 3D wall. 0 = no wall'
+              HelpContext = 304
               Alignment = taRightJustify
               NumbersOnly = True
               TabOrder = 1
@@ -2094,6 +2285,7 @@ object form_main: Tform_main
               Width = 111
               Height = 22
               Hint = 'Wall background color'
+              HelpContext = 306
               Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
               TabOrder = 2
               OnChange = cbWallColorChange
@@ -2103,6 +2295,7 @@ object form_main: Tform_main
               Top = 184
               Width = 152
               Height = 21
+              HelpContext = 28
               Style = csDropDownList
               ItemIndex = 0
               TabOrder = 6
@@ -2161,6 +2354,7 @@ object form_main: Tform_main
               Hint = 
                 'Defines the position of the legend, relative to the sides of the' +
                 ' graph area'
+              HelpContext = 351
               Style = csDropDownList
               DropDownCount = 10
               ItemIndex = 4
@@ -2185,6 +2379,8 @@ object form_main: Tform_main
               Width = 116
               Height = 21
               Hint = 'Text flow direction'
+              HelpType = htKeyword
+              HelpKeyword = '353'
               Style = csDropDownList
               ItemIndex = 0
               TabOrder = 4
@@ -2200,6 +2396,7 @@ object form_main: Tform_main
               Width = 161
               Height = 75
               Hint = 'Free text added at the end of the legend'
+              HelpContext = 357
               TabOrder = 5
               WordWrap = False
               OnExit = memLegTextExit
@@ -2208,7 +2405,7 @@ object form_main: Tform_main
               Left = 0
               Top = 0
               Width = 161
-              Height = 216
+              Height = 234
               Align = alLeft
               BevelOuter = bvNone
               Caption = 'panLegends'
@@ -2255,6 +2452,7 @@ object form_main: Tform_main
                 Width = 156
                 Height = 74
                 Hint = 'Legends. Activate pop up menu to manage the list'
+                HelpContext = 311
                 ItemHeight = 13
                 PopupMenu = pmLegends
                 TabOrder = 0
@@ -2266,6 +2464,7 @@ object form_main: Tform_main
                 Width = 89
                 Height = 21
                 Hint = 'Sets the horizontal margin relative to anchoring'
+                HelpContext = 355
                 NumbersOnly = True
                 TabOrder = 1
                 OnExit = eLegHorizMarginsExit
@@ -2276,6 +2475,7 @@ object form_main: Tform_main
                 Width = 89
                 Height = 21
                 Hint = 'Sets the vertical margin relative to anchoring'
+                HelpContext = 356
                 NumbersOnly = True
                 TabOrder = 2
                 OnExit = eLegVertMarginsExit
@@ -2286,6 +2486,7 @@ object form_main: Tform_main
                 Width = 89
                 Height = 21
                 Hint = 'Sets alignment relative to anchoring'
+                HelpContext = 359
                 Style = csDropDownList
                 TabOrder = 3
                 OnChange = cbLegAlignmentChange
@@ -2300,6 +2501,8 @@ object form_main: Tform_main
                 Width = 89
                 Height = 21
                 Hint = 'Marks titles or categories with the selected bullet type'
+                HelpType = htKeyword
+                HelpKeyword = '358'
                 Style = csDropDownList
                 TabOrder = 4
                 OnChange = cbLegBulletsChange
@@ -2315,6 +2518,7 @@ object form_main: Tform_main
               Top = 103
               Width = 81
               Height = 17
+              HelpContext = 354
               Alignment = taLeftJustify
               Caption = 'Visible'
               TabOrder = 1
@@ -2325,6 +2529,7 @@ object form_main: Tform_main
               Top = 50
               Width = 115
               Height = 58
+              HelpContext = 352
               OnClickCheck = lbxLegContentClickCheck
               ItemHeight = 13
               Items.Strings = (
@@ -2340,6 +2545,7 @@ object form_main: Tform_main
               Width = 116
               Height = 21
               Hint = 'Name of series item when anchoring is Point inside'
+              HelpContext = 363
               TabOrder = 3
               OnExit = eLegPointNameExit
             end
@@ -2351,7 +2557,7 @@ object form_main: Tform_main
               Left = 0
               Top = 0
               Width = 402
-              Height = 216
+              Height = 234
               ActivePage = tabNameSections
               Align = alClient
               Style = tsFlatButtons
@@ -2422,6 +2628,7 @@ object form_main: Tform_main
                     Top = 1
                     Width = 145
                     Height = 100
+                    HelpContext = 65
                     Align = alLeft
                     ItemHeight = 13
                     PopupMenu = pmSections
@@ -2434,6 +2641,7 @@ object form_main: Tform_main
                     Width = 153
                     Height = 21
                     Hint = 'Start value of section'
+                    HelpContext = 374
                     TabOrder = 1
                   end
                   object eNEndValue: TEdit
@@ -2442,6 +2650,7 @@ object form_main: Tform_main
                     Width = 153
                     Height = 21
                     Hint = 'End value of section'
+                    HelpContext = 375
                     TabOrder = 2
                   end
                   object eNLongCaption: TEdit
@@ -2450,6 +2659,8 @@ object form_main: Tform_main
                     Width = 153
                     Height = 21
                     Hint = 'Long caption '
+                    HelpType = htKeyword
+                    HelpKeyword = '372'
                     TabOrder = 3
                   end
                   object eNShortCaption: TEdit
@@ -2458,6 +2669,7 @@ object form_main: Tform_main
                     Width = 153
                     Height = 21
                     Hint = 'Short caption (optional)'
+                    HelpContext = 373
                     TabOrder = 4
                   end
                 end
@@ -2467,6 +2679,7 @@ object form_main: Tform_main
                   Width = 143
                   Height = 21
                   Hint = 'Type of autosection (time spanned charts only)'
+                  HelpContext = 390
                   Style = csDropDownList
                   ItemIndex = 0
                   TabOrder = 0
@@ -2486,6 +2699,7 @@ object form_main: Tform_main
                   Width = 143
                   Height = 21
                   Hint = 'Own defined time unit (time spanned charts only)'
+                  HelpContext = 389
                   Style = csDropDownList
                   ItemIndex = 0
                   TabOrder = 1
@@ -2513,6 +2727,7 @@ object form_main: Tform_main
                   Top = 166
                   Width = 51
                   Height = 17
+                  HelpContext = 406
                   Caption = 'Visible '
                   TabOrder = 4
                   OnClick = cbxNSectionsVisibleClick
@@ -2584,6 +2799,7 @@ object form_main: Tform_main
                     Top = 1
                     Width = 145
                     Height = 130
+                    HelpContext = 343
                     Align = alLeft
                     ItemHeight = 13
                     PopupMenu = pmSections
@@ -2595,6 +2811,7 @@ object form_main: Tform_main
                     Top = 5
                     Width = 153
                     Height = 21
+                    HelpContext = 374
                     TabOrder = 1
                   end
                   object eVEndValue: TEdit
@@ -2602,13 +2819,15 @@ object form_main: Tform_main
                     Top = 28
                     Width = 153
                     Height = 21
+                    HelpContext = 375
                     TabOrder = 2
                   end
                   object eVLongCaption: TEdit
-                    Left = 227
-                    Top = 52
+                    Left = 228
+                    Top = 49
                     Width = 153
                     Height = 21
+                    HelpContext = 372
                     TabOrder = 3
                   end
                   object eVShortCaption: TEdit
@@ -2616,6 +2835,7 @@ object form_main: Tform_main
                     Top = 76
                     Width = 153
                     Height = 21
+                    HelpContext = 373
                     TabOrder = 4
                   end
                 end
@@ -2667,6 +2887,7 @@ object form_main: Tform_main
           Hint = 
             'The rulers displayed when pressing the Ctrl button and sliding t' +
             'he mouse over the diagram'
+          HelpContext = 52
           Style = csDropDownList
           TabOrder = 0
           OnChange = cbRulersChange
@@ -2678,10 +2899,11 @@ object form_main: Tform_main
         end
         object GroupBox4: TGroupBox
           Left = 3
-          Top = 95
+          Top = 81
           Width = 122
           Height = 120
           Hint = 'Margins from the outer borders of the chart'
+          HelpContext = 12
           Caption = 'Border margins'
           TabOrder = 1
           object Label93: TLabel
@@ -2751,12 +2973,13 @@ object form_main: Tform_main
         end
         object GroupBox5: TGroupBox
           Left = 144
-          Top = 96
+          Top = 82
           Width = 122
           Height = 120
           Hint = 
             'Distance between the edges of the graph area and the printing ar' +
             'ea'
+          HelpContext = 15
           Caption = 'Graph margins'
           TabOrder = 2
           object Label97: TLabel
@@ -2832,6 +3055,7 @@ object form_main: Tform_main
           Hint = 
             'The kind of info displayed when pressing the Ctrl button and pos' +
             'itioning the mouse over the diagram'
+          HelpContext = 38
           Style = csDropDownList
           TabOrder = 3
           OnChange = cbMouseInfoChange
@@ -2847,10 +3071,25 @@ object form_main: Tform_main
           Width = 107
           Height = 17
           Hint = 'Centers the diagram within the chart'
+          HelpContext = 122
           Alignment = taLeftJustify
           Caption = 'Center chart'
           TabOrder = 4
           OnClick = cbxCenterChartClick
+        end
+        object cbxLiveResize: TCheckBox
+          Left = 3
+          Top = 207
+          Width = 69
+          Height = 17
+          Hint = 'Centers the diagram within the chart'
+          HelpContext = 122
+          Alignment = taLeftJustify
+          Caption = 'Live resize'
+          Checked = True
+          State = cbChecked
+          TabOrder = 5
+          OnClick = cbxLiveResizeClick
         end
       end
     end
@@ -2870,12 +3109,13 @@ object form_main: Tform_main
       Width = 1062
       Height = 741
       Align = alClient
+      Color = clBtnFace
+      ParentColor = False
       AfterBuildChart = CWAfterBuildChart
       BezierMargin = 20
       Centered = True
       Chart = Chart_CO2
-      InnerMargins.Bottom = 10
-      InnerMargins.Right = 20
+      Language = 'EN'
       MouseTimeFormat = 'mmmm" "yyyyy'
       OnDataChange = CWDataChange
       OnQuerySpace = CWQuerySpace
@@ -3122,7 +3362,7 @@ object form_main: Tform_main
     Left = 705
     Top = 537
     Bitmap = {
-      494C01010A00D806180510001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C01010B00D806D40510001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000003000000001002000000000000030
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -3152,64 +3392,64 @@ object form_main: Tform_main
       0000226048002A7A570065957B00000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000008080000080
+      8000008080000080800000808000008080000080800000808000008080000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000257151003CA4750035835A00699175000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000FFFF00000000000080
+      8000008080000080800000808000008080000080800000808000008080000080
+      8000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       000015663F0040B57C003FAA72002F7E5200709A830000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      00000000000000000000000000000000000000000000FFFFFF0000FFFF000000
+      0000008080000080800000808000008080000080800000808000008080000080
+      8000008080000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000338358003FB9790034B270003CB0750020774B006DAC8C00000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000FFFF00FFFFFF0000FF
+      FF00000000000080800000808000008080000080800000808000008080000080
+      8000008080000080800000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00003F8D5E0050C985001CA65E002BB6720045B97E00237A4E00719B84000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      00000000000000000000000000000000000000000000FFFFFF0000FFFF00FFFF
+      FF0000FFFF000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00003B90630068C1890045B57B0030AF7B0048C385002987580055856B000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000FFFF00FFFFFF0000FF
+      FF00FFFFFF0000FFFF00FFFFFF0000FFFF00FFFFFF0000FFFF00000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00003EA1710069CF950051C1870058CB99003694650076BC9800000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      00000000000000000000000000000000000000000000FFFFFF0000FFFF00FFFF
+      FF0000FFFF00FFFFFF0000FFFF00FFFFFF0000FFFF00FFFFFF00000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00002C9D6B006CDEA20062CD950046A1740086B69C0000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000FFFF00FFFFFF0000FF
+      FF00000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -3510,11 +3750,11 @@ object form_main: Tform_main
       00000000000099959000494641003D3835005C58530047433E008B857E000000
       000000000000000000000000000000000000424D3E000000000000003E000000
       2800000040000000300000000100010000000000800100000000000000000000
-      000000000000000000000000FFFFFF00FFFFFF7F00000000FFFFFE7F00000000
-      F3FFFCFF00000000F1FFF81F00000000F0FFF80F00000000F07FCCE700000000
-      F03F9E7300000000F01F9F7300000000F01F3FF900000000F03F3FF900000000
-      F07F9FF300000000F0FF9FF300000000F1FFCFE700000000F3FFE38F00000000
-      FFFFF01F00000000FFFFFC7F00000000FFFF9001FF7EFFFF8001C003BFFFFFFF
+      000000000000000000000000FFFFFF00FFFFFF7FFFFF0000FFFFFE7FFFFF0000
+      F3FFFCFF001F0000F1FFF81F000F0000F0FFF80F00070000F07FCCE700030000
+      F03F9E7300010000F01F9F7300000000F01F3FF9001F0000F03F3FF9001F0000
+      F07F9FF3001F0000F0FF9FF38FF10000F1FFCFE7FFF90000F3FFE38FFF750000
+      FFFFF01FFF8F0000FFFFFC7FFFFF0000FFFF9001FF7EFFFF8001C003BFFFFFFF
       8001E003F003FF3F8BB9E003E003FE3F8001E003E003FC3F8B99E003E003F83F
       80010001E003F03F8BB980002003E03F8001E007E002E03F8BB9E00FE003F03F
       8001E00FE003F83F9FF9E027E003FC3F8001C073E003FE3F80019E79FFFFFF3F
@@ -3533,6 +3773,7 @@ object form_main: Tform_main
     Font.Name = 'Tahoma'
     Font.Style = []
     KeepFontColor = False
+    StatLineWidth = 0
     LineWidth = 2
     MinPointSpacing = 1
     SeriesStyles = <>
@@ -3583,7 +3824,8 @@ object form_main: Tform_main
     Font.Name = 'Tahoma'
     Font.Style = []
     HorizMargins = 0
-    PointName = '01.03.2022'
+    PointItemIndex = 768
+    PointName = '3/1/2022'
     PointOptions = [poShowConnectionLine, poThinConnectionLine]
     Text.Strings = (
       'Pandemic')
@@ -3596,6 +3838,7 @@ object form_main: Tform_main
       'C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Grap' +
       'hs\CO2Graph.CWD'
     GraphBGColor = clSkyBlue
+    InnerMargins.Right = 20
     Legends = <
       item
         Legend = Leg_CO2
@@ -3635,8 +3878,9 @@ object form_main: Tform_main
     ValueScale1.Font.Style = []
     ValueScale1.Qualifier = 'PPM'
     ValueScale1.ScaleRounding = False
-    ValueScale1.ValueHigh = 1.000000000000000000
+    ValueScale1.ValueHigh = 424.000000000000000000
     ValueScale1.ValueIntervals = 1.000000000000000000
+    ValueScale1.ValueLow = 312.429992675781300000
     ValueScale1.ValueSpanFromData = True
     ValueScale2.Font.Charset = DEFAULT_CHARSET
     ValueScale2.Font.Color = clWindowText
@@ -3767,5 +4011,22 @@ object form_main: Tform_main
     object MenuItem4: TMenuItem
       Action = acDeleteSeries
     end
+  end
+  object dlgImage: TOpenPictureDialog
+    Left = 868
+    Top = 589
+  end
+  object CWBar1: TCWBar
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    KeepFontColor = False
+    StatLineWidth = 0
+    AutoSize = False
+    ShowQualifier = False
+    Left = 876
+    Top = 285
   end
 end

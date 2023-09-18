@@ -102,6 +102,7 @@ object frm_New: Tfrm_New
         Top = 0
         Width = 226
         Height = 21
+        HelpContext = 312
         EditLabel.Width = 20
         EditLabel.Height = 13
         EditLabel.Caption = 'Title'
@@ -115,6 +116,7 @@ object frm_New: Tfrm_New
         Top = 24
         Width = 150
         Height = 21
+        HelpContext = 204
         Style = csDropDownList
         ItemIndex = 1
         TabOrder = 1
@@ -132,6 +134,7 @@ object frm_New: Tfrm_New
         Top = 74
         Width = 97
         Height = 17
+        HelpContext = 267
         Caption = 'Correlation data'
         TabOrder = 3
         OnClick = cbxCorrelationClick
@@ -168,6 +171,7 @@ object frm_New: Tfrm_New
         Top = 49
         Width = 148
         Height = 21
+        HelpContext = 324
         Style = csDropDownList
         Enabled = False
         TabOrder = 2
@@ -262,6 +266,7 @@ object frm_New: Tfrm_New
         Top = 149
         Width = 75
         Height = 21
+        HelpContext = 211
         Style = csDropDownList
         ItemIndex = 0
         TabOrder = 2
@@ -276,6 +281,7 @@ object frm_New: Tfrm_New
         Top = 34
         Width = 223
         Height = 86
+        HelpContext = 309
         Style = lbOwnerDrawFixed
         TabOrder = 0
         OnClick = lbSeriesClick
@@ -286,6 +292,7 @@ object frm_New: Tfrm_New
         Top = 124
         Width = 155
         Height = 21
+        HelpContext = 412
         EditLabel.Width = 50
         EditLabel.Height = 13
         EditLabel.Caption = 'Series title'
@@ -307,6 +314,7 @@ object frm_New: Tfrm_New
         Top = 200
         Width = 107
         Height = 21
+        HelpContext = 160
         Style = csDropDownList
         Enabled = False
         ItemIndex = 0
@@ -322,6 +330,7 @@ object frm_New: Tfrm_New
         Top = 226
         Width = 75
         Height = 21
+        HelpContext = 462
         Style = csDropDownList
         ItemIndex = 0
         TabOrder = 5
@@ -402,6 +411,7 @@ object frm_New: Tfrm_New
         Top = 32
         Width = 156
         Height = 170
+        HelpContext = 308
         Style = lbOwnerDrawFixed
         ItemHeight = 13
         TabOrder = 0
@@ -413,6 +423,7 @@ object frm_New: Tfrm_New
         Top = 208
         Width = 171
         Height = 21
+        HelpContext = 282
         TabOrder = 1
         Text = 'Category 1'
       end
@@ -421,6 +432,7 @@ object frm_New: Tfrm_New
         Top = 233
         Width = 113
         Height = 22
+        HelpContext = 281
         Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
         TabOrder = 2
       end

@@ -1,6 +1,7 @@
 ﻿ChartWriter CWR
 [PROPERTIES]
 Chart=FruitSalesChart
+LiveResize=1
 [Data]
 Bananas=45000
 Pears=3900
@@ -27,7 +28,7 @@ Passion fruits=800
 [OBJECTS]
 [BAR]
 Name=FruitSalesBar
-BarWidth=41
+BarWidth=31
 ItemSpacing=20
 SeriesSpacing=2
 BarLayout=1
@@ -52,10 +53,14 @@ anGrow=0
 Animation=0
 AnimationSpeed=1
 AnimationPause=0
+StatLine=0
+StatLineWidth=1
+SMAPeriods=0
+StatBackgroundBlending=0
 [EOF]
 [BAR]
 Name=FruitSalesBar
-BarWidth=41
+BarWidth=31
 ItemSpacing=20
 SeriesSpacing=2
 BarLayout=1
@@ -80,6 +85,10 @@ anGrow=0
 Animation=0
 AnimationSpeed=1
 AnimationPause=0
+StatLine=0
+StatLineWidth=1
+SMAPeriods=0
+StatBackgroundBlending=0
 [EOF]
 [ALTERNATIVE]
 [PIE]
@@ -145,7 +154,7 @@ coValue=1
 coName=1
 coNameSpan=0
 ContentFlow=0
-Enabled=0
+Enabled=1
 HorizMargins=5
 PointItemIndex=0
 PointName=
@@ -180,6 +189,14 @@ GraphBGColor=-16777211
 GraphBorders=0
 toName=0
 toValue=0
+InnerLeftMargin=0
+InnerTopMargin=0
+InnerRightMargin=20
+InnerBottomMargin=0
+GraphLeftMargin=0
+GraphTopMargin=40
+GraphRightMargin=0
+GraphBottomMargin=0
 {SERIES0}
 Graph=FruitSalesBar
 Title=2021
@@ -238,6 +255,7 @@ NumSpanPrecision=0
 AllowImages=1
 Qualifier=
 ShowDividerLines=0
+MinLabelSpacing=5
 ShowLabels=1
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
@@ -249,6 +267,7 @@ ValueLow=800
 ValuePrecision1=1
 Qualifier=Million US$
 ShowDividerLines=1
+MinLabelSpacing=5
 ShowLabels=1
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=12632256,0,1,4
@@ -260,6 +279,7 @@ ValueLow=0
 ValuePrecision2=0
 Qualifier=
 ShowDividerLines=0
+MinLabelSpacing=5
 ShowLabels=1
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4

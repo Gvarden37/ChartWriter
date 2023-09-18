@@ -41,6 +41,7 @@ object formSections: TformSections
     Width = 97
     Height = 22
     Hint = 'Section line pen'
+    HelpContext = 385
     Caption = 'Line pen ...'
     OnClick = SpeedButton2Click
   end
@@ -90,6 +91,7 @@ object formSections: TformSections
     Width = 145
     Height = 21
     Hint = 'Sets position of the caption row'
+    HelpContext = 381
     Style = csDropDownList
     TabOrder = 2
     OnChange = cbCaptionLayoutChange
@@ -103,6 +105,7 @@ object formSections: TformSections
     Width = 57
     Height = 21
     Hint = 'Sets space between captions and graph area along the y axis'
+    HelpContext = 382
     NumbersOnly = True
     TabOrder = 3
     OnExit = eHorizMarginExit
@@ -113,6 +116,7 @@ object formSections: TformSections
     Width = 57
     Height = 21
     Hint = 'Sets space between captions and graph area along the x axis'
+    HelpContext = 383
     NumbersOnly = True
     TabOrder = 4
     OnExit = eVertMarginExit
@@ -123,6 +127,7 @@ object formSections: TformSections
     Width = 121
     Height = 17
     Hint = 'Shows / hides the sections'
+    HelpContext = 387
     Alignment = taLeftJustify
     Caption = 'Show lines'
     TabOrder = 5
@@ -134,6 +139,7 @@ object formSections: TformSections
     Width = 121
     Height = 17
     Hint = 'Divides the captions by prolonging the section lines'
+    HelpContext = 386
     Alignment = taLeftJustify
     Caption = 'Prolonged lines'
     TabOrder = 6

@@ -8,7 +8,7 @@ uses
   Vcl.ExtCtrls, System.Actions, Vcl.ActnList, Vcl.StdActns, System.ImageList,
   Vcl.ImgList, Vcl.ToolWin, frame_1, system.generics.collections, Vcl.CheckLst,
   Vcl.Buttons, form_pen, form_Sections, form_data, form_new, Vcl.Menus,
-  Vcl.Samples.Spin;
+  Vcl.Samples.Spin, VCl.HtmlHelpViewer, Vcl.ExtDlgs;
 
 
 type
@@ -189,8 +189,6 @@ type
     Label50: TLabel;
     Label51: TLabel;
     cbxCurveBeaconPoints: TCheckBox;
-    cbCurveStatLine: TComboBox;
-    Label52: TLabel;
     cbCurvePointMarkers: TComboBox;
     Label53: TLabel;
     sbFont: TSpeedButton;
@@ -420,6 +418,22 @@ type
     Resetcontraction1: TMenuItem;
     N3: TMenuItem;
     sb: TStatusBar;
+    imgLabel: TImage;
+    Label109: TLabel;
+    dlgImage: TOpenPictureDialog;
+    SpeedButton2: TSpeedButton;
+    tabStats: TTabSheet;
+    Label52: TLabel;
+    cbCurveStatLine: TComboBox;
+    Label110: TLabel;
+    Label111: TLabel;
+    eSMAPeriods: TEdit;
+    eStatLineWidth: TSpinEdit;
+    Label112: TLabel;
+    tbStatBGBlending: TTrackBar;
+    cbxLiveResize: TCheckBox;
+    CWBar1: TCWBar;
+    cbxImageLabels: TCheckBox;
     procedure FileOpen1Accept(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -557,6 +571,15 @@ type
     procedure acResetContractionExecute(Sender: TObject);
     procedure acResetContractionUpdate(Sender: TObject);
     procedure acContractUpdate(Sender: TObject);
+    function FormHelp(Command: Word; Data: NativeInt;
+      var CallHelp: Boolean): Boolean;
+    procedure SpeedButton2Click(Sender: TObject);
+    procedure eSMAPeriodsExit(Sender: TObject);
+    procedure eStatLineWidthChange(Sender: TObject);
+    procedure tbStatBGBlendingChange(Sender: TObject);
+    procedure cbxLiveResizeClick(Sender: TObject);
+    procedure cbCurveStatLineChange(Sender: TObject);
+    procedure cbxImageLabelsClick(Sender: TObject);
   private
     { Private declarations}
     FGraph1, FGraph2 : TCWGraph;
@@ -587,6 +610,7 @@ type
     procedure WMExitSizeMove(var Message: TWMSize); message WM_EXITSIZEMOVE;
     procedure WMEnterSizeMove(var Message: TWMSize); message WM_ENTERSIZEMOVE;
     procedure SetStates;
+    procedure LoadImage;
   public
     { Public declarations }
    procedure SetPenProps(APen : TPen);
@@ -699,7 +723,6 @@ begin
    Frm.cbxCurveBeaconPoints.Checked := G.BeaconPoints;
    Frm.cbxCurveBeaconPoints.OnClick := E;
    Frm.cbCurvePointMarkers.ItemIndex := Ord(G.PointMarkers);
-   Frm.cbCurveStatLine.ItemIndex := Ord(G.StatLine);
    Frm.cbLineShape.ItemIndex := Ord(G.LineShape);
    Frm.lbCurveFontName.Caption := G.Font.Name + ' ' + IntToStr(G.Font.Size);
    Frm.lbCurveFontName.Font.Color := G.Font.Color;
@@ -725,6 +748,11 @@ begin
    Frm.cbxCurveKeepFontColor.OnClick := E;
    Frm.lbCurveFontName.Caption := G.Font.Name + ' ' + IntToStr(G.Font.Size);
    Frm.lbCurveFontName.Font.Color := G.Font.Color;
+   Frm.cbCurveStatLine.ItemIndex := Ord(G.StatLine);
+   Frm.eSMAPeriods.Text := IntToStr(G.SMAPeriods);
+   Frm.tbStatBGBlending.Position := G.StatBackgroundBlending;
+   Frm.eStatLineWidth.Value := G.StatLineWidth;
+
 end;
 
 procedure TCurveControls.Update(Ctrl : TObject);
@@ -817,11 +845,18 @@ begin
      G.AreaBrush.Color := Frm.cbNeighborAreaColor.Selected;
      G.BeaconPoints := Frm.cbxCurveBeaconPoints.Checked;
      G.PointMarkers := TPointMarkers(Frm.cbCurvePointMarkers.ItemIndex);
-     G.StatLine := TStatLine(Frm.cbCurveStatLine.ItemIndex);
      DoAnimation := not G.Animation and Frm.cbxCurveAnimation.Checked;
      G.Animation := Frm.cbxCurveAnimation.Checked;
      G.AnimationSpeed := TAnimationSpeed(Frm.cbCurveAnimationSpeed.ItemIndex);
      G.AnimationPause := StrToInt(Frm.eCurveAnimationPause.Text);
+     G.StatLine := TStatLine(Frm.cbCurveStatLine.ItemIndex);
+     G.StatBackgroundBlending := Frm.tbStatBGBlending.Position;
+     G.StatLineWidth := Frm.eStatLineWidth.Value;
+     if Frm.eSMAPeriods.Text <> '' then
+     begin
+       G.SMAPeriods := StrToInt(Frm.eSMAPeriods.Text);
+     end;
+
      if DoAnimation then
        Frm.CW.RefreshChart;
     except
@@ -896,6 +931,7 @@ begin
   Frm.lbxBarOptions.Checked[0] := boBaseLine in G.Options;
   Frm.lbxBarOptions.Checked[1] := boOutlines in G.Options;
   Frm.lbxBarOptions.Checked[2] := boText in G.Options;
+  Frm.lbxBarOptions.Checked[3] := boBarImages in G.Options;
   Frm.lbxBarTexts.Checked[0] := tcValue in G.TextContents;
   Frm.lbxBarTexts.Checked[1] := tcName in G.TextContents;
   Frm.lbxBarTexts.Checked[2] := tcTitle in G.TextContents;
@@ -919,6 +955,10 @@ begin
   E := Frm.DisableCBXEvent(Frm.cbxAutoSize);
   Frm.cbxAutoSize.Checked := G.AutoSize;
   Frm.cbxAutoSize.OnClick := E;
+  Frm.cbCurveStatLine.ItemIndex := Ord(G.StatLine);
+  Frm.eSMAPeriods.Text := IntToStr(G.SMAPeriods);
+  Frm.tbStatBGBlending.Position := G.StatBackgroundBlending;
+  Frm.eStatLineWidth.Value := G.StatLineWidth;
 end;
 
 procedure TBarControls.ApplyAnimations;
@@ -965,6 +1005,7 @@ begin
     if Frm.lbxBarOptions.Checked[0] then Opt := Opt + [boBaseLine];
     if Frm.lbxBarOptions.Checked[1] then Opt := Opt + [boOutLines];
     if Frm.lbxBarOptions.Checked[2] then Opt := Opt + [boText];
+    if Frm.lbxBarOptions.Checked[3] then Opt := Opt + [boBarImages];
     G.Options := Opt;
 
     Txt := [];
@@ -974,10 +1015,20 @@ begin
     if Frm.lbxBarTexts.Checked[3] then Txt := Txt + [tcPercentage];
     G.TextContents := Txt;
 
+
+
     G.BaseLineValue := StrToFloat(Frm.eBarBaselineValue.Text);
     G.ShowQualifier := Frm.cbxShowQualifier.Checked;
     G.CubeAngle := StrToInt(Frm.eCubeAngle.Text);
     G.CubeDepth := StrToInt(Frm.eCubeDepth.Text);
+
+    G.StatLine := TStatLine(Frm.cbCurveStatLine.ItemIndex);
+    G.StatBackgroundBlending := Frm.tbStatBGBlending.Position;
+    G.StatLineWidth := Frm.eStatLineWidth.Value;
+    if Frm.eSMAPeriods.Text <> '' then
+     begin
+       G.SMAPeriods := StrToInt(Frm.eSMAPeriods.Text);
+     end;
 
    except
      FRM.CW.CancelUpdate;
@@ -1106,6 +1157,19 @@ begin
     else
      CW.BezierMargin := 20;
    end;
+   if CW.Chart is TCWSpanChart then
+   begin
+     CW.ValueScale1.MinLabelSpacing := 10;
+   end;
+end;
+
+procedure TForm_Main.LoadImage;
+begin
+  if dlgImage.Execute then
+  begin
+    ImgLabel.Picture.LoadFromFile(dlgImage.FileName);
+    CW.Categories.Items[lbItems.ItemIndex].Image.Assign(ImgLabel.Picture);
+  end;
 end;
 
 procedure TForm_Main.SetStates;
@@ -1131,17 +1195,22 @@ const
     end;
 
 begin
-
   if CW.Chart = nil then
   begin
     sb.SimpleText := '  No active chart';
     Exit;
+  end;
+  if CW.Count = 0 then
+  begin
+   sb.SimpleText := '  No data';
+   Exit;
   end;
   if CW.OverflowError then
   begin
     sb.SimpleText := '  Overflow error';
     Exit;
   end;
+  if CW.IsAxisChart then
   if CW.NameScale.OverflowAction = ovScrolling then
   begin
      if CW.CanScroll(stNext) or  CW.CanScroll(stPrev) then
@@ -1861,8 +1930,11 @@ end;
 procedure Tform_main.Button1Click(Sender: TObject);
 var
  Res : integer;
+ C : TChartWriter;
+
 begin
-  frm_new.Showmodal;
+  //c := TChartWriter.Create(Curve);
+  //c.Parent := Curve;
    //CW.ChartList.Next;
 //   Res := CountWholeMonths(StrToDateTime('1.4.2000'), StrToDatetIme('1.5.2003'));
    //Co2;
@@ -1953,7 +2025,19 @@ end;
 
 procedure Tform_main.cbCurvePointMarkersChange(Sender: TObject);
 begin
-   FCurveControls.Update(Sender);
+   FActiveGraphControls.Update(Sender);
+end;
+
+procedure Tform_main.cbCurveStatLineChange(Sender: TObject);
+begin
+ CW.BeginUpdate;
+   with FGraph1 as TCWAxisGraph do
+     Statline := TStatLine(cbCurveStatLine.ItemIndex);
+   if FGraph2 <> nil then
+     with FGraph2 as TCWAxisGraph do
+     Statline := TStatLine(cbCurveStatLine.ItemIndex);
+ CW.EndUpdate;
+
 end;
 
 procedure Tform_main.cbCurveStyleChange(Sender: TObject);
@@ -2075,6 +2159,12 @@ begin
   FPieControls.Free;
 end;
 
+function Tform_main.FormHelp(Command: Word; Data: NativeInt;
+  var CallHelp: Boolean): Boolean;
+begin
+   CallHelp := True;
+end;
+
 procedure Tform_main.lbApplyOnClick(Sender: TObject);
 begin
     FCurveControls.FStyleIndex := lbApplyOn.ItemIndex-1;
@@ -2150,7 +2240,7 @@ end;
 
 procedure Tform_main.lbxBarOptionsClickCheck(Sender: TObject);
 begin
-   FBarControls.Update(lbxBarOptions);
+   FBarControls.Update(cbLayout);
 end;
 
 procedure Tform_main.lbxLegContentClickCheck(Sender: TObject);
@@ -2319,6 +2409,9 @@ begin
     eNamePrecision.Text := IntToStr(CW.Namescale.NumSpanPrecision);
     cbOverflowAction.ItemIndex := Ord(CW.NameScale.OverflowAction);
     Names.FillControls;
+    E := DisableCBXEvent(cbxImageLabels);
+    cbxImageLabels.Checked := CW.NameScale.AllowImages;
+    cbxImageLabels.OnClick := E;
     V1.FillControls;
     if not (CW.Chart is TCWCategoryBarChart) then
      V2.FillControls;
@@ -2359,17 +2452,18 @@ begin
 
   cbRulers.ItemIndex := Ord(TRulers(CW.Rulers));
   cbMouseInfo.ItemIndex := Ord(TMouseInfo(CW.MouseInfo));
-  eIMargLeft.Text := IntToStr(CW.InnerMargins.Left);
-  eIMargTop.Text := IntToStr(CW.InnerMargins.Top);
-  eIMargRight.Text := IntToStr(CW.InnerMargins.Right);
-  eIMargBottom.Text := IntToStr(CW.InnerMargins.Bottom);
-  eGMargLeft.Text := IntToStr(CW.GraphMargins.Left);
-  eGMargTop.Text := IntToStr(CW.GraphMargins.Top);
-  eGMargRight.Text := IntToStr(CW.GraphMargins.Right);
-  eGMargBottom.Text := IntToStr(CW.GraphMargins.Bottom);
+  eIMargLeft.Text := IntToStr(CW.Chart.InnerMargins.Left);
+  eIMargTop.Text := IntToStr(CW.Chart.InnerMargins.Top);
+  eIMargRight.Text := IntToStr(CW.Chart.InnerMargins.Right);
+  eIMargBottom.Text := IntToStr(CW.Chart.InnerMargins.Bottom);
+  eGMargLeft.Text := IntToStr(CW.Chart.GraphMargins.Left);
+  eGMargTop.Text := IntToStr(CW.Chart.GraphMargins.Top);
+  eGMargRight.Text := IntToStr(CW.Chart.GraphMargins.Right);
+  eGMargBottom.Text := IntToStr(CW.Chart.GraphMargins.Bottom);
   E := DisableCBXEvent(cbxCenterChart);
   cbxCenterChart.Checked := CW.Centered;
   cbxCenterChart.OnClick := E;
+  cbxLiveResize.Checked := CW.LiveResize;
 
   { Sections}
   if CW.IsAxisChart then
@@ -2469,6 +2563,23 @@ begin
 
 end;
 
+procedure Tform_main.tbStatBGBlendingChange(Sender: TObject);
+begin
+  FActiveGraphControls.Update(Sender);
+ CW.BeginUpdate;
+   with FGraph1 as TCWAxisGraph do
+   begin
+     if FGraph2 <> nil then
+      StatBackgroundBlending := tbStatBGBlending.Position div 2
+     else
+      StatBackgroundBlending := tbStatBGBlending.Position;
+   end;
+   if FGraph2 <> nil then
+     with FGraph2 as TCWAxisGraph do
+     StatBackgroundBlending := tbStatBGBlending.Position div 2;
+ CW.EndUpdate;
+end;
+
 procedure Tform_main.SyncItemControls(ItmNr: Integer);
 begin
   if not (CW.Chart is TCWCategoryChart) then
@@ -2478,6 +2589,11 @@ begin
 
   cbChartItemColor.Selected := CW.Categories[ItmNr].Color;
   eItemName.Text := CW.Categories[ItmNr].CategoryName;
+
+  if CW.Categories[ItmNr].Image.Graphic <> nil then
+   imgLabel.Picture.Assign(CW.Categories[ItmNr].Image)
+  else
+   imgLabel.Picture.Graphic := nil;
 
 end;
 
@@ -2662,6 +2778,11 @@ begin
      CW.GradientWall := cbxGradientWall.Checked;
 end;
 
+procedure Tform_main.cbxImageLabelsClick(Sender: TObject);
+begin
+  CW.NameScale.AllowImages := cbxImageLabels.Checked;
+end;
+
 procedure Tform_main.cbxCurveKeepFontColorClick(Sender: TObject);
 begin
   SelGraph.KeepFontColor := TCheckBox(Sender).Checked;
@@ -2670,6 +2791,11 @@ end;
 procedure Tform_main.cbxLegVisibleClick(Sender: TObject);
 begin
   CW.Chart.Legends.Items[lbLegends.ItemIndex].Legend.Visible := cbxLegVisible.Checked;
+end;
+
+procedure Tform_main.cbxLiveResizeClick(Sender: TObject);
+begin
+    CW.LiveResize := cbxLiveResize.Checked;
 end;
 
 procedure Tform_main.cbxNSectionsVisibleClick(Sender: TObject);
@@ -2828,6 +2954,7 @@ begin
   Curve.TabVisible := false;
   Bar.TabVisible := false;
   Pie.TabVisible := false;
+  tabStats.TabVisible := false;
 
   if FGraph1 is TCWCurve then
     Curve.TabVisible := True
@@ -2866,6 +2993,7 @@ begin
   begin
     tabItems.TabVisible := false;
     tabScales.TabVisible := True;
+    tabStats.TabVisible := True;
     if CW.Chart.AxisCount = 2 then
       tabValueScale2.TabVisible := True;
 
@@ -2926,22 +3054,22 @@ end;
 
 procedure Tform_main.eGMargBottomExit(Sender: TObject);
 begin
-  CW.GraphMargins.Bottom := StrToInt(eGMargBottom.Text);
+  CW.Chart.GraphMargins.Bottom := StrToInt(eGMargBottom.Text);
 end;
 
 procedure Tform_main.eGmargLeftExit(Sender: TObject);
 begin
-  CW.GraphMargins.Left := StrToInt(eGMargLeft.Text);
+  CW.Chart.GraphMargins.Left := StrToInt(eGMargLeft.Text);
 end;
 
 procedure Tform_main.eGMargRightExit(Sender: TObject);
 begin
-  CW.GraphMargins.Right := StrToInt(eGMargRight.Text);
+  CW.Chart.GraphMargins.Right := StrToInt(eGMargRight.Text);
 end;
 
 procedure Tform_main.eGMargTopExit(Sender: TObject);
 begin
- CW.GraphMargins.Top := StrToInt(eGMargTop.Text);
+ CW.Chart.GraphMargins.Top := StrToInt(eGMargTop.Text);
 end;
 
 procedure Tform_main.eHighValueExit(Sender: TObject);
@@ -2966,22 +3094,22 @@ end;
 
 procedure Tform_main.eIMargBottomExit(Sender: TObject);
 begin
-  CW.InnerMargins.Bottom := StrToInt(eIMargBottom.Text);
+  CW.Chart.InnerMargins.Bottom := StrToInt(eIMargBottom.Text);
 end;
 
 procedure Tform_main.eIMargLeftExit(Sender: TObject);
 begin
-  CW.InnerMargins.Left := StrToInt(eIMargLeft.Text);
+  CW.Chart.InnerMargins.Left := StrToInt(eIMargLeft.Text);
 end;
 
 procedure Tform_main.eIMargRightExit(Sender: TObject);
 begin
-  CW.InnerMargins.Right := StrToInt(eIMargRight.Text);
+  CW.Chart.InnerMargins.Right := StrToInt(eIMargRight.Text);
 end;
 
 procedure Tform_main.eIMargTopExit(Sender: TObject);
 begin
-  CW.InnerMargins.Top := StrToInt(eIMargTop.Text);
+  CW.Chart.InnerMargins.Top := StrToInt(eIMargTop.Text);
 end;
 
 procedure Tform_main.eItemNameExit(Sender: TObject);
@@ -3073,6 +3201,34 @@ begin
      CW.Chart.SeriesDefs[lbSeries.ItemIndex].Title := eSeriesTitle.Text;
 end;
 
+procedure Tform_main.eSMAPeriodsExit(Sender: TObject);
+var
+  N : integer;
+begin
+  if eSMAPeriods.Text = '' then
+    Exit;
+  CW.BeginUpdate;
+  with FGraph1 as TCWAxisGraph do
+    SMAPeriods := StrToInt(eSMAPeriods.Text);
+   if FGraph2 <> nil then
+     with FGraph2 as TCWAxisGraph do
+     SMAPeriods := StrToInt(eSMAPeriods.Text);
+  CW.EndUpdate;
+end;
+
+procedure Tform_main.eStatLineWidthChange(Sender: TObject);
+begin
+  if eStatlineWidth.Text = '' then
+    Exit;
+  CW.BeginUpdate;
+   with FGraph1 as TCWAxisGraph do
+    StatlineWidth := eStatLineWidth.Value;
+   if FGraph2 <> nil then
+     with FGraph2 as TCWAxisGraph do
+     StatlineWidth := eStatLineWidth.Value;
+  CW.EndUpdate;
+end;
+
 procedure Tform_main.eValueIntervalsExit(Sender: TObject);
 var
  VScale : TCWValueScale;
@@ -3098,12 +3254,16 @@ procedure Tform_main.eWallWidthExit(Sender: TObject);
 begin
    if CW.Chart <> nil then
      CW.WallWidth := StrToInt(eWallWidth.Text);
-
 end;
 
 procedure TForm_main.ShowData;
 begin
    frmData.Show;
+end;
+
+procedure Tform_main.SpeedButton2Click(Sender: TObject);
+begin
+  LoadImage;
 end;
 
 procedure TForm_main.CreateChart;

@@ -13,7 +13,7 @@ package ChartW;
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
 {$OPTIMIZATION OFF}
-{$OVERFLOWCHECKS ON}
+{$OVERFLOWCHECKS OFF}
 {$RANGECHECKS OFF}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
@@ -26,14 +26,16 @@ package ChartW;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$RUNONLY}
-{$IMPLICITBUILD OFF}
+{$IMPLICITBUILD ON}
 
 requires
   rtl,
   vcl,
+  vclactnband,
   vclx,
-  vclimg,
-  dbrtl;
+  xmlrtl,
+  dbrtl,
+  vclimg;
 
 contains
   ChartWriter in 'ChartWriter.pas';

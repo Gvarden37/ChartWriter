@@ -14,6 +14,8 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
+  Application.HelpFile := 'C:\Users\47994\Documents\Embarcadero\Studio\Projects\GraphWriter\ChartWriter.chm';
+  Application.Title := 'CWDemo';
   Application.CreateForm(Tform_main, form_main);
   Application.CreateForm(TformPen, formPen);
   Application.CreateForm(TformSections, formSections);

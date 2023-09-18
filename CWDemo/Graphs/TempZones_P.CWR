@@ -1,6 +1,7 @@
 ﻿ChartWriter CWR
 [PROPERTIES]
 Chart=Chart_TempInndeling
+LiveResize=1
 [Data]
 -20 til -10=0
 -11 til 0=43000
@@ -147,6 +148,14 @@ GraphBGColor=16777215
 GraphBorders=1
 toName=0
 toValue=0
+InnerLeftMargin=0
+InnerTopMargin=0
+InnerRightMargin=0
+InnerBottomMargin=0
+GraphLeftMargin=0
+GraphTopMargin=0
+GraphRightMargin=0
+GraphBottomMargin=0
 {SERIES0}
 Graph=piTempinndeling
 Title=Max 03.08.2022 - 02.08.2023
@@ -189,6 +198,7 @@ NumSpanPrecision=0
 Qualifier=
 AllowImages=0
 ShowDividerLines=0
+MinLabelSpacing=5
 ShowLabels=1
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
@@ -200,6 +210,7 @@ ValueLow=0
 ValuePrecision1=0
 Qualifier=
 ShowDividerLines=0
+MinLabelSpacing=5
 ShowLabels=1
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
@@ -211,6 +222,7 @@ ValueLow=0
 ValuePrecision2=0
 Qualifier=
 ShowDividerLines=0
+MinLabelSpacing=5
 ShowLabels=1
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
