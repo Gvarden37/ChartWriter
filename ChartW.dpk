@@ -31,9 +31,11 @@ package ChartW;
 requires
   rtl,
   vcl,
+  vclactnband,
   vclx,
-  vclimg,
-  dbrtl;
+  xmlrtl,
+  dbrtl,
+  vclimg;
 
 contains
   ChartWriter in 'ChartWriter.pas';

@@ -124,9 +124,11 @@
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="vcl.dcp"/>
+        <DCCReference Include="vclactnband.dcp"/>
         <DCCReference Include="vclx.dcp"/>
-        <DCCReference Include="vclimg.dcp"/>
+        <DCCReference Include="xmlrtl.dcp"/>
         <DCCReference Include="dbrtl.dcp"/>
+        <DCCReference Include="vclimg.dcp"/>
         <DCCReference Include="ChartWriter.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>

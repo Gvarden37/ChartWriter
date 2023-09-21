@@ -1,6 +1,7 @@
 package DclChartW;
 
 {$R *.res}
+{$R 'CompIcons.dcr'}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -25,16 +26,15 @@ package DclChartW;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'GraphWriter'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
 
 requires
   rtl,
-  designIDE,
+  designide,
   ChartW;
 
 contains
-  Reg in 'Reg.pas';
+  Regs in 'Regs.pas';
 
 end.

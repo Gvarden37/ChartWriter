@@ -1,4 +1,4 @@
-unit Reg;
+unit Regs;
 interface
 uses classes, DesignIntf, DesignEditors, DesignMenus, SysUtils, ChartWriter, VCL.Dialogs;
 
@@ -20,55 +20,40 @@ uses Vcl.Controls;
 procedure Register;
 begin
   RegisterComponents('ChartWriter', [TChartWriter, TCWCurve, TCWBar, TCWPie,
-    TCWNameSectionDefs, TCWValueSectionDefs, TCWLegend, TCWAxisChart, TCWPieChart]);
+    TCWNameSectionDefs, TCWValueSectionDefs, TCWLegend, TCWSpanChart, TCWGeneralChart, TCWCategoryBarChart, TCWPieChart]);
   RegisterComponentEditor(TChartWriter, TGWLiveGraphs);
 end;
 
 function TGWLiveGraphs.GetVerb(Index : integer) : string;
 begin
-  if Index = 0 then
-   Result := 'Live graphs'
-  else
-   Result := 'Load from file';
+   Result := 'Live graphs';
 end;
 
 procedure TGWLiveGraphs.ExecuteVerb(Index : integer);
 var
-  Dlg : TFileOpenDialog;
+  C : TCWChart;
 begin
- if Index = 0 then
- begin
-  TChartWriter(Component).LiveGraphs := not TChartWriter(Component).LiveGraphs;
-  if not TChartWriter(Component).LiveGraphs then
-  begin
-    TChartWriter(Component).InitDesigner := false;
-    TChartWriter(Component).DsgnRealData := false;
-    TChartWriter(Component).Clear;
+    TChartWriter(Component).LiveGraphs := not TChartWriter(Component).LiveGraphs;
+    if TChartWriter(Component).Chart = nil then
+      Exit;
+    if not TChartWriter(Component).LiveGraphs then
+    begin
+       TChartWriter(Component).Clear;
+       Exit;
+    end;
 
-  end;
-   TChartWriter(Component).Repaint;
- end
- else
- begin
-    Dlg := TFileOpenDialog.Create(Component);
-    try
-      if Dlg.Execute then
-      begin
-        TChartWriter(Component).LiveGraphs := False;
-        TChartWriter(Component).LoadFromFile(Dlg.FileName);
-      end;
-      finally
-        Dlg.Free;
-      end;
-    TChartWriter(Component).DsgnRealData := True;
-    TChartWriter(Component).LiveGraphs := True;
-    TChartWriter(Component).Repaint;
- end;
+    if TChartWriter(Component).Chart.FileName <> '' then
+    begin
+      TChartWriter(Component).LoadFromFile(TChartWriter(Component).Chart.FileName);
+      Exit;
+    end
+    else
+      TChartWriter(Component).RenderDesigner;
 end;
 
 function TGWLiveGraphs.GetVerbCount : integer;
 begin
-  Result := 2;
+  Result := 1;
 end;
 
 procedure TGWLiveGraphs.PrepareItem(Index: Integer; const AItem: IMenuItem);
