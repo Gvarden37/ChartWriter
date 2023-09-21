@@ -382,7 +382,7 @@ object form_main: Tform_main
         object cbCurvePointMarkers: TComboBox
           Left = 95
           Top = 315
-          Width = 101
+          Width = 123
           Height = 22
           Hint = 'Images or text that marks up the points'
           HelpContext = 53
@@ -401,8 +401,8 @@ object form_main: Tform_main
             'None'
             'Small ball'
             'Big ball'
-            'Small concentric'
-            'Big concentric'
+            'Small concentirc circels'
+            'Big concentric circles'
             'Dot'
             'Text')
         end
@@ -1339,7 +1339,6 @@ object form_main: Tform_main
           Top = 109
           Width = 51
           Height = 21
-          HelpContext = 526
           NumbersOnly = True
           TabOrder = 3
           Text = '0'
@@ -1350,7 +1349,6 @@ object form_main: Tform_main
           Top = 83
           Width = 48
           Height = 22
-          HelpContext = 529
           MaxValue = 3
           MinValue = 1
           TabOrder = 2
@@ -1362,7 +1360,6 @@ object form_main: Tform_main
           Top = 43
           Width = 150
           Height = 39
-          HelpContext = 527
           Max = 128
           Frequency = 5
           TabOrder = 1
@@ -3362,7 +3359,7 @@ object form_main: Tform_main
     Left = 705
     Top = 537
     Bitmap = {
-      494C01010B00D806D40510001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C01010B00D806C80510001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000003000000001002000000000000030
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -3774,6 +3771,7 @@ object form_main: Tform_main
     Font.Style = []
     KeepFontColor = False
     StatLineWidth = 0
+    Animation = True
     LineWidth = 2
     MinPointSpacing = 1
     SeriesStyles = <>

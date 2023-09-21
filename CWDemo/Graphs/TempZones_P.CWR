@@ -131,7 +131,7 @@ Font=-16777208,0|0|0|0|,8,Tahoma,1
 [EOF]
 [PIECHART]
 Name=Chart_TempInndeling
-Title=Temperaturinndeling
+Title=Temperature zones
 SpanType=1
 Percentages=0
 AxisOrientation=0

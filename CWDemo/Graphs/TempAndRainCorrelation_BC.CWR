@@ -880,7 +880,7 @@ ShortCaption=0
 [EOF]
 [SPANCHART]
 Name=Chart_TempOgnedbor
-Title=Temperatures og precipitation
+Title=Temperatures and precipitation
 SpanType=1
 Percentages=0
 AxisOrientation=0

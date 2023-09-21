@@ -31,8 +31,8 @@ uses
   System.SysUtils, System.Generics.Collections, System.Classes, Windows,
   Vcl.Controls,
   System.Types, Vcl.Graphics, Math, Vcl.StdCtrls, System.Messaging,
-  Vcl.AppEvnts,
-  Messages, GraphUtil, System.UITypes, System.Rtti, GDIPUtil, GDIPapi, GDIPObj,
+  Vcl.AppEvnts, GraphUtil,
+  Messages, System.UITypes, System.Rtti, GDIPUtil, GDIPapi, GDIPObj,
   Forms, Vcl.ExtCtrls, Data.DB;
 
 const
@@ -1855,6 +1855,7 @@ type
     function GetWriter : TChartWriter;
     function GetZoomed : Boolean;
     function ValAx2Graph : TCWGraph; {Retuns the graph connected to ValueAxis2}
+    function VisibleGraphCount(GraphType : TClass) : integer;
     procedure CreateLegendContent;
     procedure DrawLegends;
     procedure DrawQualifiers;
@@ -7987,6 +7988,18 @@ begin
 
 end;
 
+function TCWChart.VisibleGraphCount(GraphType : TClass) : integer;
+{Counts number of visible graphs of GraphType}
+var
+  i : integer;
+begin
+  Result := 0;
+  for i := 0 to SeriesDefs.Count - 1 do
+    if (SeriesDefs[i].Visible) and (SeriesDefs[i].Graph.ClassType = GraphType) then
+      inc(Result);
+end;
+
+
 procedure TCWChart.SetTextTilting(Value: TTextOrientations);
 begin
   if Value = FTextTilting then
@@ -9766,6 +9779,7 @@ var
     SerInd, ItmInd: integer;
     Points: TPointArray;
     IsHandled: Boolean;
+    GrRect : TRect;
 
     procedure SetOrigProps;
     begin
@@ -9969,6 +9983,7 @@ var
       end;
 
     begin
+      GrRect := Writer.GraphRect;
       PIndx := AIndex - ASource.FirstItem;
       if (ActiveStyle[ASource] = csPoints) and (PointMarkers = pmNone) then
         FPointMarkers := pmDot;
@@ -10007,12 +10022,15 @@ var
           R.Right := Points[PIndx].X + Sz.cx;
           R.Top := Points[PIndx].Y - (Sz.cy div 2) - 6;
           R.Bottom := Points[PIndx].Y + (Sz.cy div 2) - 6;
-          Canvas.Font.Color := Clr;
-          Canvas.Pen.Color := clBlack;
-          Canvas.Brush.Style := bsClear;
-          Canvas.Brush.Color := Writer.Chart.GraphBGColor;
-          Canvas.TextRect(R, R.Left, R.Top, S);
-          Canvas.Pen.Color := Clr;
+          if GrRect.Contains(R) then
+          begin
+            Canvas.Font.Color := Clr;
+            Canvas.Pen.Color := clBlack;
+            Canvas.Brush.Style := bsClear;
+            Canvas.Brush.Color := Writer.Chart.GraphBGColor;
+            Canvas.TextRect(R, R.Left, R.Top, S);
+            Canvas.Pen.Color := Clr;
+          end;
         end
 
         else
@@ -10034,6 +10052,7 @@ var
     end;
 
   begin
+    GrRect := Writer.GraphRect;
     FPaintSeriesIndex := ASource.Index;
     RestoreOrigProps;
     if Anim and not(ActiveStyle[ASource] = csLine) and
@@ -13487,7 +13506,7 @@ const
       OuterHeight := HDist*2 + Height;
     end;
 
-    Cnt := Writer.VisibleCount;
+    Cnt := Chart.VisibleGraphCount(TCWPie);
     R := Writer.GraphRect;
     if R.Width >= R.Height then
     begin
@@ -13916,6 +13935,7 @@ begin
   end;
 
   if (Value is TCWPie) and not (Chart is TCWPieChart) then
+  {Consider open up, making it possible to mix pies and curces/bars?}
   begin
      if Chart.FAlternativeGraph = nil then
       ShowGWError(msg_PieGeneral);
@@ -17043,6 +17063,10 @@ begin
     else
       Result := FPoints
   end
+  else if Writer.InView(TCWBar) <> nil then
+     Result := FBarPoints
+  else if Writer.InView(TCWCurve) <> nil then
+     Result := FPoints
   else
     Result := nil;
 end;
@@ -17547,6 +17571,7 @@ begin
   Clr := RGB(223, 231, 240);
   FAppEvent := TApplicationEvents.Create(Self);
   FAppEvent.OnMessage := AppMsg;
+  { Catching key strokes, so that keydn/keyup is processed even if comp has no focus}
   with FBall.Canvas do
   begin
     Pen.Color := Clr;
