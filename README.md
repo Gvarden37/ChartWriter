@@ -1,11 +1,6 @@
 # ChartWriter
-<<<<<<< HEAD
-The ChartWriter component is an all round chart producer built around the basisc graph types Curve, Bar and Pie.  A variety of design time options let you tailor your charts without writing much code. These are some of the key features:
-=======
-
 The ChartWriter component is an all round chart producer built around the basisc graph types Curve, Bar and Pie.  A variety of design time options let you tailor your charts without writing much code. These are some of the key features:
 
->>>>>>> 8f2060a294408028e32de62b19ef1487359feb7b
 •	3D support for bars and pies
 •	Animation (all graph types)
 •	Chart subclassing. Choose between different chart types supporting time line or number spanned series, or charts adapted to categories of any kind.
@@ -21,8 +16,5 @@ The ChartWriter component is an all round chart producer built around the basisc
 •	Zooming. Drill down to view the details.
 •	Live designer data. View the results of your settings design time.
 •	… and much more.
-<<<<<<< HEAD
-ChartWriter offers some basic statistic functions (including linear regression and simple moving average). However, if your goal is to create advanced financial or statistic applications, you should probably consider another tool than ChartWriter.
-=======
+
 ChartWriter offers some basic statistic functions (including linear regression and simple moving average). 
->>>>>>> 8f2060a294408028e32de62b19ef1487359feb7b
