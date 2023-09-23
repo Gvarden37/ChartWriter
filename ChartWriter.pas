@@ -6101,6 +6101,7 @@ function TNameAxis.GetSectionSpace: integer;
 var
   Marg : integer;
 begin
+  Result := 0;
   Marg := 0;
   if Chart.NameSectionDefs = nil then
     Result := 0
@@ -22193,7 +22194,6 @@ begin
 
       if InState(stUpdating) then
         Exit;
-
       if (FSeriesData.Count = 0) then
       begin
         DrawEssentials;
