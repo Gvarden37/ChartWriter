@@ -432,7 +432,6 @@ type
     Label112: TLabel;
     tbStatBGBlending: TTrackBar;
     cbxLiveResize: TCheckBox;
-    CWBar1: TCWBar;
     cbxImageLabels: TCheckBox;
     procedure FileOpen1Accept(Sender: TObject);
     procedure FormCreate(Sender: TObject);

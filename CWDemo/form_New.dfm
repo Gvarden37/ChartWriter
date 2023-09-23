@@ -120,11 +120,11 @@ object frm_New: Tfrm_New
         Style = csDropDownList
         ItemIndex = 1
         TabOrder = 1
-        Text = 'General flow chart'
+        Text = 'General'
         OnChange = cbChartTypeChange
         Items.Strings = (
           'Time or number span'
-          'General flow chart'
+          'General'
           'Pie chart'
           'Category bar chart'
           '')
@@ -186,10 +186,6 @@ object frm_New: Tfrm_New
     end
     object tabSeries: TTabSheet
       Caption = 'Series'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object Label1: TLabel
         Left = 10
         Top = 34
@@ -346,10 +342,6 @@ object frm_New: Tfrm_New
     object tabCats: TTabSheet
       Caption = 'Categories'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object Label9: TLabel
         Left = 8
         Top = 235

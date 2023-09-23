@@ -163,8 +163,8 @@ object form_main: Tform_main
           Caption = 'Point markers'
         end
         object sbFont: TSpeedButton
-          Left = 2
-          Top = 340
+          Left = -16
+          Top = 119
           Width = 79
           Height = 22
           Action = acCurveFont
@@ -3359,7 +3359,7 @@ object form_main: Tform_main
     Left = 705
     Top = 537
     Bitmap = {
-      494C01010B00D806C80510001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C01010B00D806DC0510001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000003000000001002000000000000030
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -3832,9 +3832,7 @@ object form_main: Tform_main
     Top = 645
   end
   object Chart_CO2: TCWSpanChart
-    FileName = 
-      'C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Grap' +
-      'hs\CO2Graph.CWD'
+    FileName = 'CO2Graph.CWD'
     GraphBGColor = clSkyBlue
     InnerMargins.Right = 20
     Legends = <
@@ -4013,18 +4011,5 @@ object form_main: Tform_main
   object dlgImage: TOpenPictureDialog
     Left = 868
     Top = 589
-  end
-  object CWBar1: TCWBar
-    Font.Charset = DEFAULT_CHARSET
-    Font.Color = clWindowText
-    Font.Height = -11
-    Font.Name = 'Tahoma'
-    Font.Style = []
-    KeepFontColor = False
-    StatLineWidth = 0
-    AutoSize = False
-    ShowQualifier = False
-    Left = 876
-    Top = 285
   end
 end
