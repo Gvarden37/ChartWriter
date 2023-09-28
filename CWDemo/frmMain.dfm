@@ -493,7 +493,7 @@ object form_main: Tform_main
         end
         object cbxCurveKeepFontColor: TCheckBox
           Left = 2
-          Top = 365
+          Top = 360
           Width = 108
           Height = 17
           Hint = 'Overrides font color adaption, keeping the color of Text font.'
@@ -525,12 +525,26 @@ object form_main: Tform_main
             'Bezier'
             'Step')
         end
+        object cbxAntiAliasing: TCheckBox
+          Left = 207
+          Top = 256
+          Width = 101
+          Height = 17
+          Alignment = taLeftJustify
+          Caption = 'Anti aliasing'
+          TabOrder = 11
+          OnClick = cbxAntiAliasingClick
+        end
       end
       object Bar: TTabSheet
         Caption = 'Bar'
         ImageIndex = 1
         ParentShowHint = False
         ShowHint = True
+        ExplicitLeft = 0
+        ExplicitTop = 0
+        ExplicitWidth = 0
+        ExplicitHeight = 0
         object Label58: TLabel
           Left = 6
           Top = 8
@@ -856,7 +870,6 @@ object form_main: Tform_main
               'Pauses animation between each series. -1 = manual pause. Mouse c' +
               'lick resumes.'
             HelpContext = 340
-            NumbersOnly = True
             TabOrder = 3
             Text = '0'
           end
@@ -897,8 +910,8 @@ object form_main: Tform_main
           object Label47: TLabel
             Left = 2
             Top = 15
-            Width = 183
-            Height = 65
+            Width = 181
+            Height = 52
             Align = alClient
             Alignment = taCenter
             Caption = 
@@ -906,8 +919,6 @@ object form_main: Tform_main
               'e styles cannot be effected if space is to small.'
             Layout = tlCenter
             WordWrap = True
-            ExplicitWidth = 181
-            ExplicitHeight = 52
           end
         end
         object cbxAutoSize: TCheckBox
@@ -952,6 +963,10 @@ object form_main: Tform_main
         ImageIndex = 2
         ParentShowHint = False
         ShowHint = True
+        ExplicitLeft = 0
+        ExplicitTop = 0
+        ExplicitWidth = 0
+        ExplicitHeight = 0
         object Label12: TLabel
           Left = 3
           Top = 199
@@ -1285,6 +1300,10 @@ object form_main: Tform_main
       object tabStats: TTabSheet
         Caption = 'Statistics'
         ImageIndex = 3
+        ExplicitLeft = 0
+        ExplicitTop = 0
+        ExplicitWidth = 0
+        ExplicitHeight = 0
         object Label52: TLabel
           Left = 14
           Top = 16
@@ -1511,6 +1530,10 @@ object form_main: Tform_main
           object tabSeries: TTabSheet
             Caption = 'Series'
             ImageIndex = 5
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object Label6: TLabel
               Left = 125
               Top = 55
@@ -1650,6 +1673,10 @@ object form_main: Tform_main
           object tabItems: TTabSheet
             Caption = 'Categories'
             ImageIndex = 6
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object Label8: TLabel
               Left = 160
               Top = 7
@@ -2143,6 +2170,10 @@ object form_main: Tform_main
           object tabAxisAttributes: TTabSheet
             Caption = 'Axis profile'
             ImageIndex = 3
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object Label15: TLabel
               Left = 3
               Top = 6
@@ -2307,6 +2338,10 @@ object form_main: Tform_main
           object tabLegends: TTabSheet
             Caption = 'Legends'
             ImageIndex = 5
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object Label33: TLabel
               Left = 178
               Top = 6
@@ -2550,6 +2585,10 @@ object form_main: Tform_main
           object tabSections: TTabSheet
             Caption = 'Sections'
             ImageIndex = 6
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object pgSections: TPageControl
               Left = 0
               Top = 0
@@ -2561,6 +2600,10 @@ object form_main: Tform_main
               TabOrder = 0
               object tabNameSections: TTabSheet
                 Caption = 'Name sections'
+                ExplicitLeft = 0
+                ExplicitTop = 0
+                ExplicitWidth = 0
+                ExplicitHeight = 0
                 object Label4: TLabel
                   Left = 1
                   Top = -1
@@ -2733,6 +2776,10 @@ object form_main: Tform_main
               object tabValueSections: TTabSheet
                 Caption = 'Value sections'
                 ImageIndex = 1
+                ExplicitLeft = 0
+                ExplicitTop = 0
+                ExplicitWidth = 0
+                ExplicitHeight = 0
                 object Label32: TLabel
                   Left = 2
                   Top = 1
@@ -2862,6 +2909,10 @@ object form_main: Tform_main
       object tab_Commons: TTabSheet
         Caption = 'Commons'
         ImageIndex = 2
+        ExplicitLeft = 0
+        ExplicitTop = 0
+        ExplicitWidth = 0
+        ExplicitHeight = 0
         object Label91: TLabel
           Left = 3
           Top = 13
@@ -3112,7 +3163,6 @@ object form_main: Tform_main
       BezierMargin = 20
       Centered = True
       Chart = Chart_CO2
-      Language = 'EN'
       MouseTimeFormat = 'mmmm" "yyyyy'
       OnDataChange = CWDataChange
       OnQuerySpace = CWQuerySpace
@@ -3359,7 +3409,7 @@ object form_main: Tform_main
     Left = 705
     Top = 537
     Bitmap = {
-      494C01010B00D806180610001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C01010B00D8064C0610001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000003000000001002000000000000030
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

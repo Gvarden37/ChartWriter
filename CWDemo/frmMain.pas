@@ -433,6 +433,7 @@ type
     tbStatBGBlending: TTrackBar;
     cbxLiveResize: TCheckBox;
     cbxImageLabels: TCheckBox;
+    cbxAntiAliasing: TCheckBox;
     procedure FileOpen1Accept(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -509,7 +510,6 @@ type
     procedure cbxVSectionsVisibleClick(Sender: TObject);
     procedure cbxNSectionsVisibleClick(Sender: TObject);
     procedure lbChartsClick(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
     procedure acNextPageExecute(Sender: TObject);
     procedure acUnzoomExecute(Sender: TObject);
     procedure acDashbordExecute(Sender: TObject);
@@ -579,6 +579,7 @@ type
     procedure cbxLiveResizeClick(Sender: TObject);
     procedure cbCurveStatLineChange(Sender: TObject);
     procedure cbxImageLabelsClick(Sender: TObject);
+    procedure cbxAntiAliasingClick(Sender: TObject);
   private
     { Private declarations}
     FGraph1, FGraph2 : TCWGraph;
@@ -751,6 +752,9 @@ begin
    Frm.eSMAPeriods.Text := IntToStr(G.SMAPeriods);
    Frm.tbStatBGBlending.Position := G.StatBackgroundBlending;
    Frm.eStatLineWidth.Value := G.StatLineWidth;
+   E := Frm.DisableCBXEvent(Frm.cbxAntiAliasing);
+   Frm.cbxAntiAliasing.Checked := G.SmoothLines;
+   Frm.cbxAntiAliasing.OnClick := E;
 
 end;
 
@@ -855,6 +859,7 @@ begin
      begin
        G.SMAPeriods := StrToInt(Frm.eSMAPeriods.Text);
      end;
+     G.SmoothLines := Frm.cbxAntiAliasing.Checked;
 
      if DoAnimation then
        Frm.CW.RefreshChart;
@@ -1926,22 +1931,6 @@ begin
     acV2LabelFont.Dialog.Font.Assign(CW.ValuesCale2.Font)
 end;
 
-procedure Tform_main.Button1Click(Sender: TObject);
-var
- Res : integer;
- C : TChartWriter;
-
-begin
-  //c := TChartWriter.Create(Curve);
-  //c.Parent := Curve;
-   //CW.ChartList.Next;
-//   Res := CountWholeMonths(StrToDateTime('1.4.2000'), StrToDatetIme('1.5.2003'));
-   //Co2;
-   //CW.Chart := CWSpanchart1;
-   //CW.LoadFromFile('C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\COGraph2.CWR');
-  // CW.SaveToFile('C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\COGraph2.CWR', sfRich);
-end;
-
 procedure Tform_main.sbMoreNSectionsClick(Sender: TObject);
 begin
    formSections.SectionKind := CW.NameSectionDefs;
@@ -2731,6 +2720,11 @@ procedure Tform_main.cbWallColorChange(Sender: TObject);
 begin
     if CW.Chart <> nil then
      CW.WallColor := cbWallColor.Selected;
+end;
+
+procedure Tform_main.cbxAntiAliasingClick(Sender: TObject);
+begin
+  FCurveControls.Update(Sender);
 end;
 
 procedure Tform_main.cbxAutoSizeClick(Sender: TObject);

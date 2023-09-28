@@ -110,43 +110,43 @@ Visible=1
 {ITEMCOLOR0}
 Ident=Sunny
 Color=65535
-ImageFileName=C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Sunny.BMP
+ImageFileName=Sunny.BMP
 {ITEMCOLOR1}
 Ident=Fair day
 Color=57311
-ImageFileName=C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Fair day.BMP
+ImageFileName=Fair day.BMP
 {ITEMCOLOR2}
 Ident=Partly cloudy
 Color=39835
-ImageFileName=C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Partly cloudy.BMP
+ImageFileName=Partly cloudy.BMP
 {ITEMCOLOR3}
 Ident=Cloudy
 Color=12632256
-ImageFileName=C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Cloudy.BMP
+ImageFileName=Cloudy.BMP
 {ITEMCOLOR4}
 Ident=Light rain
 Color=16744576
-ImageFileName=C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Light rain.BMP
+ImageFileName=Light rain.BMP
 {ITEMCOLOR5}
 Ident=Rain
 Color=16711680
-ImageFileName=C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Rain.BMP
+ImageFileName=Rain.BMP
 {ITEMCOLOR6}
 Ident=Heavy rain
 Color=4194304
-ImageFileName=C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Heavy rain.BMP
+ImageFileName=Heavy rain.BMP
 {ITEMCOLOR7}
 Ident=Fog
 Color=12632256
-ImageFileName=C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\Fog.BMP
+ImageFileName=Fog.BMP
 {NAMESCALE}
 OverflowAction=3
 NumSpanPrecision=0
 AllowImages=1
 Qualifier=Weather
 ShowDividerLines=0
-MinLabelSpacing=5
 ShowLabels=1
+MinLabelSpacing=5
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 {VALUESCALE1}
@@ -157,8 +157,8 @@ ValueLow=10000
 ValuePrecision1=1
 Qualifier=Days
 ShowDividerLines=0
-MinLabelSpacing=5
 ShowLabels=1
+MinLabelSpacing=5
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 {VALUESCALE2}
@@ -169,8 +169,8 @@ ValueLow=0
 ValuePrecision2=0
 Qualifier=
 ShowDividerLines=0
-MinLabelSpacing=5
 ShowLabels=1
+MinLabelSpacing=5
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 [EOF]

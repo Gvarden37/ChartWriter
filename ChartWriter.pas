@@ -647,6 +647,7 @@ type
     procedure FontChange(Sender : TObject);
     procedure SetActiveColor(const Value : TColor);
     procedure SetAnimation(const Value : Boolean);
+    procedure SetDelay(Counter : integer);
     procedure SetInternalActiveColor(SeriesIndex, ItemIndex : integer; Value : TColor); virtual;
     procedure SetKeepFontColor(const Value : Boolean);
     property InternalActiveColor[SeriesIndex, ItemIndex : integer] : TColor
@@ -966,6 +967,8 @@ type
     FOnDrawBar: TDrawBarEvent;
     FOnMouseEnterBar: TMouseItemEvent;
     FOnMouseLeaveBar: TMouseItemEvent;
+    FGpen : TGPPen;
+    FGBrush : TGPSolidBrush;
     function Compressing: Boolean;
     function Get3DBarWidth: integer;
     function GetBarStyle: TBarStyle;
@@ -1053,6 +1056,9 @@ type
     FStyle : TPieStyle;
     FTitleSpace: integer;
     FValuePrecision : integer;
+    FGPen: TGPPen;
+    FGBrush: TGPSolidBrush;
+
     function GetActualSize: integer;
     function GetHeight : integer;
     function GetInternalActiveColor(SeriesIndex, ItemIndex : integer): TColor; override;
@@ -2028,6 +2034,7 @@ type
     {Internal use}
     FActiveValAx : TAxisObject;
     FAlfaBM: Vcl.Graphics.TBitmap; {Transparent layer used with mouse sselection}
+    FAnimBM: Vcl.Graphics.TBitmap;
     FAnimInfo: TAnimInfo; {Used by the animation engine: DoAnimation}
     FAppEvent: TApplicationEvents;
     FBall: Vcl.Graphics.TBitmap;
@@ -2613,6 +2620,8 @@ function InvertColor(Color : TColor) : TColor;
 
 var
   StrictProtection : Boolean;
+//    StartLog : Boolean;
+//    Plus, Mins : integer;
 
 
 implementation
@@ -2622,6 +2631,7 @@ uses DateUtils, Dialogs, System.Generics.Defaults, JPEG, Vcl.Imaging.pngImage;
 var
   Fmt: TFormatSettings;
   WriterList : TWriterList;
+//  log : TStringList;
   {WriterList keeps track of all graphs objects that interacts with a writer.
   Its is used to check if an object tries to link to more than one writer.
   This is not allowed and causes an exception. AddToWlist updates the list}
@@ -5383,6 +5393,7 @@ begin
       GradBrush.Free
     else
       GBrush.Free;
+    FGDIP.ReleaseHDC(Canvas.Handle);
     FGDIP.Free;
   end;
 end;
@@ -6019,7 +6030,10 @@ begin
     Writer.ResetCanvas(nil);
   finally
     if Writer.HasWall then
+    begin
+      FGDIP.ReleaseHDC(Canvas.Handle);
       FGDIP.Free;
+    end;
   end;
 end;
 
@@ -6684,6 +6698,7 @@ begin
       end;
     end;
   finally
+    FGDIP.ReleaseHDC(Canvas.Handle);
     FGDIP.Free;
     sl.Free;
   end;
@@ -8244,7 +8259,10 @@ function TCWGraph.GetCanvas: TCanvas;
 begin
   if Writer <> nil then
   begin
-    Result := Writer.Canvas
+    if Writer.InState(StAnimating) then
+      Result := Writer.FAnimBM.Canvas
+    else
+      Result := Writer.Canvas
   end
   else
     Result := nil;
@@ -8252,7 +8270,7 @@ end;
 
 procedure TCWGraph.Draw;
 begin
-  if not(ClassType = TCWCurve) then
+  if not(ClassType = TCWCurve) and not Writer.InState(StAnimating) then
   begin
     FGDIP := TGPGraphics.Create(Canvas.Handle);
     FGDIP.SetSmoothingMode(SmoothingModeAntiAlias);
@@ -8340,6 +8358,139 @@ procedure TCWGraph.SetAnimation(const Value : Boolean);
 begin
   FAnimation := Value;
 end;
+
+procedure TCWGraph.SetDelay(Counter : integer);
+var
+  Boost: integer;
+  LS: TSeries;
+  Delay: integer;
+  Freq: integer;
+  AP : LongWord;
+  function GetSpeed: integer;
+  begin
+    Result := 0;
+    case AnimationSpeed of
+      asFast:
+        Result := Writer.AnimationTuner.FastFreq;
+      asMediumFast:
+        Result := Writer.AnimationTuner.MediumFastFreq;
+      asMediumSlow:
+        Result := Writer.AnimationTuner.MediumSlowFreq;
+      asSlow:
+        Result := Writer.AnimationTuner.SlowFreq;
+    end;
+  end;
+
+  procedure RecreateGraphics;
+  begin
+   FGDIP.Free;
+   FGDIP := TGPGraphics.Create(Canvas.Handle);
+   FGDIP.SetSmoothingMode(SmoothingModeAntiAlias);
+   FGDIP.SetInterpolationMode(InterpolationMode.InterpolationModeHighQuality);
+   FGDIP.SetCompositingQuality(CompositingQuality.CompositingQualityHighQuality);
+  end;
+
+begin
+  Delay := Writer.AnimationTuner.Delay;
+  LS := Writer.FLongestSeries;
+  if ClassType = TCWCurve then
+    TCWCurve(Self).Animations := [anFlow];
+
+  if ClassType = TCWBar then
+    Boost := TCWBar(Self).AnimationBooster
+  else
+    Boost := 0;
+
+  if Boost < 0 then
+    Delay := Delay + Abs(Boost * 10);
+  Freq := GetSpeed;
+
+  begin
+    if (ClassType = TCWPie)
+    or ((Self is TCWAxisGraph) and (anGrow in TCWAxisGraph(Self).Animations)) then
+    begin
+      if Freq > 0 then
+        if Counter mod Freq = 0 then
+          Sleep(Delay);
+    end
+    else
+    begin
+      if Boost = 0 then
+      begin
+        if Freq > 0 then
+        begin
+          if Counter mod Freq = 0 then
+            Sleep(Delay);
+        end
+        else
+          Sleep(0);
+      end
+      else
+      begin
+        if Boost > 0 then
+        begin
+          if Freq = 0 then
+            Sleep(0)
+          else if Counter mod (Freq + Boost) = 0 then
+            Sleep(Delay);
+        end
+        else
+          Sleep(Delay);
+      end;
+    end;
+    if ClassType = TCWBar then
+    begin
+      if (TCWBar(Self).AnimationPause <> 0) and Writer.FAnimInfo.Paused and
+        (TCWBar(Self).Layout = blSideBySide) and
+        (Writer.FAnimInfo.NextHorz < Writer.Count * LS.Count) then
+      with Self as TCWBar do
+      begin
+       if AnimationPause > 0 then
+       begin
+         AP := LongWord(AnimationPause);
+         Sleep(AP);
+         Writer.FAnimInfo.Paused := false;
+       end
+       else
+       begin
+        Writer.SetState(stAnimationPause);
+        Writer.SaveSelBM;
+        while Writer.InState(stAnimationPause) do
+        begin
+          Application.ProcessMessages; {Manual resume. No black screen here!?}
+        end;
+        RecreateGraphics; {Necessary, as the canvas handle has changed}
+       end;
+      end;
+    end
+    else if Writer.FAnimInfo.Paused then
+    //with ActiveGraph do
+    begin
+       if AnimationPause > 0 then
+       begin
+         AP := LongWord(AnimationPause);
+         Sleep(AP);
+         Writer.FAnimInfo.Paused := false;
+       end
+       else
+       begin
+        Writer.SetState(stAnimationPause);
+        Writer.SaveSelBM;
+        while Writer.InState(stAnimationPause) do
+        begin
+          Application.ProcessMessages;
+        end;
+        Writer.FAnimInfo.Paused := false;
+       end;
+    end;
+  end;
+
+  {ClearState(stAnimationPause);
+  ClearState(stResumeAnimation);
+  Chart.FHasAnimated := True;
+  Repaint;}
+end;
+
 
 function TCWGraph.GetWriter : TChartWriter;
 begin
@@ -9143,12 +9294,14 @@ begin
   FMinPointSpacing := 2;
   FSmoothLines := True;
   FBeaconIndex := -1;
+  FGPen := TGPPen.Create(0);
 end;
 
 destructor TCWCurve.Destroy;
 begin
   FAreaBrush.Free;
   FSeriesStyles.Free;
+  FGPen.Free;
   inherited;
 end;
 
@@ -9687,6 +9840,22 @@ var
    Clr: TColor;
    CStyl: TCurvelineStyle;
    W: integer;
+
+   procedure DrawGDI;
+   begin
+    Canvas.Pen.Width := W;
+    Canvas.Pen.Color := Clr;
+    if CStyl = lsDot then
+       Canvas.Pen.Style := psDot
+    else if CStyl = lsDash then
+      Canvas.Pen.Style := psDash
+    else
+      Canvas.Pen.Style := psSolid;
+    Canvas.MoveTo(x1, y1);
+    Canvas.LineTo(x2, y2);
+   end;
+
+
 begin
     CStyl := ActiveLineStyle[ASource];
     W := ActiveLineWidth[ASource];
@@ -9696,37 +9865,34 @@ begin
       Clr := InternalActiveColor[ASource.Index, -1];
     if StatLine then
       W := StatLineWidth;
-    FGPen.SetColor(MakeGPClr(clr));
-    FGPen.SetWidth(W);
-    if CStyl = lsDot then
-      FGPen.SetDashStyle(DashStyle.DashStyleDot)
-    else if CStyl = lsDash then
-      FGPen.SetDashStyle(DashStyle.DashStyleDash)
-    else
-      FGPen.SetDashStyle(DashStyle.DashStyleSolid);
+    if SmoothLines then
+    begin
+      FGPen.SetColor(MakeGPClr(clr));
+      FGPen.SetWidth(W);
+      if CStyl = lsDot then
+        FGPen.SetDashStyle(DashStyle.DashStyleDot)
+      else if CStyl = lsDash then
+        FGPen.SetDashStyle(DashStyle.DashStyleDash)
+      else
+        FGPen.SetDashStyle(DashStyle.DashStyleSolid);
+    end;
 
     if (LineShape = lsStep) and not StatLine and not (ActiveStyle[Asource] = csNeighborArea)then
     begin
-      GDIP.DrawLine(FGPen,x1, y1, x2, y1);
-      GDIP.DrawLine(FGPen,x2, y1, x2, y2);
+      if SmoothLines then
+      begin
+        GDIP.DrawLine(FGPen,x1, y1, x2, y1);
+        GDIP.DrawLine(FGPen,x2, y1, x2, y2);
+      end
+      else
+        DrawGDI;
     end
     else
     begin
       if SmoothLines then
        GDIP.DrawLine(FGPen,x1, y1, x2, y2 )
       else
-      begin
-        Canvas.Pen.Width := W;
-        Canvas.Pen.Color := Clr;
-        if CStyl = lsDot then
-          Canvas.Pen.Style := psDot
-        else if CStyl = lsDash then
-          Canvas.Pen.Style := psDash
-        else
-          Canvas.Pen.Style := psSolid;
-        Canvas.MoveTo(x1, y1);
-        Canvas.LineTo(x2, y2);
-      end;
+        DrawGDI;
     end;
 end;
 
@@ -10221,13 +10387,17 @@ begin
     LoopCnt := loop;
   end;
   OrigProps.NeedsRestore := False;
-  if Writer <> nil then
+  if (Writer <> nil)then
   begin
-    FGDIP := TGPGraphics.Create(Canvas.Handle);
-    FGDIP.SetSmoothingMode(SmoothingModeAntiAlias);
-    FGDIP.SetInterpolationMode(InterpolationMode.InterpolationModeHighQuality);
-    FGDIP.SetCompositingQuality(CompositingQuality.CompositingQualityHighQuality);
-    FGPEN := TGPPen.Create(0);
+    if SmoothLines and not Anim then
+    begin
+      FGDIP := TGPGraphics.Create(Canvas.Handle);
+      FGDIP.SetSmoothingMode(SmoothingModeAntiAlias);
+      FGDIP.SetInterpolationMode(InterpolationMode.InterpolationModeHighQuality);
+      FGDIP.SetCompositingQuality(CompositingQuality.CompositingQualityHighQuality);
+//      FGPEN := TGPPen.Create(0);
+    end;
+
     FFirstBaseLine := True;
     try
        for i := loop to LoopCnt do
@@ -10245,7 +10415,7 @@ begin
        if not Anim then
         DoDrawNeighbors;
 
-       if StatLine <> slNone then
+       if (StatLine <> slNone) and not Anim then
        begin
          if (StatBackgroundBlending > 0)  then
          begin
@@ -10263,8 +10433,12 @@ begin
          end;
        end;
     finally
-      FGDIP.Free;
-      FGPEN.Free;
+      if SmoothLines and not Anim then
+      begin
+       FGDIP.ReleaseHDC(Canvas.Handle);
+       FGDIP.Free;
+  //     FGPEN.Free;
+      end;
     end;
   end;
 
@@ -10439,10 +10613,14 @@ begin
   FLayout := blSideBySide;
   FTextContents := [tcValue];
   FCubeAngle := 45;
+  FGBrush := TGPSolidBrush.Create(0);
+  FGPen := TGPPen.Create(0);
 end;
 
 destructor TCWBar.Destroy;
 begin
+  FGPen.Free;
+  FGBrush.Free;
   inherited;
 end;
 
@@ -11023,8 +11201,8 @@ var
   LastColor: TColor;
   UsebaseLine: Boolean;
   SelColor: TColor;
-  GPen: TGPPen;
-  GBrush: TGPSolidBrush;
+  //GPen: TGPPen;
+  //GBrush: TGPSolidBrush;
   VertAnim, HorzAnim: Boolean;
   LastRect: TRect;
   ExcludeEvent: Boolean;
@@ -11051,11 +11229,17 @@ var
     G := GetGValue(Clr);
     B := GetBValue(Clr);
     if (Which = 0) or (Which = 1) then
-      GBrush := TGPSolidBrush.Create(MakeColor(255, R, G, B));
+    begin
+      //GBrush := TGPSolidBrush.Create(MakeColor(255, R, G, B));
+      FGBrush.SetColor(MakeColor(255, R, G, B));
+    end;
     if (Which = 0) or (Which = 2) then
-      GPen := TGPPen.Create(MakeColor(255, R, G, B), 0);
+    begin
+      //GPen := TGPPen.Create(MakeColor(255, R, G, B), 0);
+      FGPen.SetColor(MakeColor(255, R, G, B));
+    end;
   end;
-
+///
   function DoTrack(BrkLine: integer; OutPutIndex: integer; ARect: TRect;
     SerIndx, SerItmIndx: integer): TTrackBar;
   var
@@ -11367,11 +11551,11 @@ var
         if (boOutLines in Options) or ItmClrsMultiseries  then
         begin
           SetTheColor(Color, 2);
-          GDIP.DrawLine(GPen, MakePoint(R.Left, R.Top),
+          GDIP.DrawLine(FGPen, MakePoint(R.Left, R.Top),
             MakePoint(R.Left, R.Bottom));
-          GDIP.DrawLine(GPen, MakePoint(R.Right, R.Top),
+          GDIP.DrawLine(FGPen, MakePoint(R.Right, R.Top),
             MakePoint(R.Right, R.Bottom));
-          GPen.Free;
+          //GPen.Free;
         end;
         GradBrush.Free;
         Exit;
@@ -11430,10 +11614,10 @@ var
       Clr := ChangeColor(AClr, d3_Outline);
       SetTheColor(Clr, 2);
       if Ellips then
-        GDIP.DrawEllipse(GPen, MakeRect(R))
+        GDIP.DrawEllipse(FGPen, MakeRect(R))
       else
-        GDIP.DrawArc(GPen, MakeRect(R), 0, 180);
-      GPen.Free;
+        GDIP.DrawArc(FGPen, MakeRect(R), 0, 180);
+      //GPen.Free;
     end;
 
     procedure DrawFirstTop(Colr: TColor; Rct: TRect);
@@ -11444,10 +11628,10 @@ var
       SetTheColor(Clr);
       Dec(Rct.Right);
       Inc(Rct.Left);
-      GDIP.FillEllipse(GBrush, MakeRect(Rct));
-      GDIP.DrawEllipse(GPen, MakeRect(Rct));
-      GBrush.Free;
-      GPen.Free;
+      GDIP.FillEllipse(FGBrush, MakeRect(Rct));
+      GDIP.DrawEllipse(FGPen, MakeRect(Rct));
+      //GBrush.Free;
+      //GPen.Free;
       if (boOutLines in Options) or ItmClrsMultiseries then
       begin
         DrawOutLine(Colr, True);
@@ -11472,9 +11656,10 @@ var
     GPClr2 := MakeGPClr(Clr);
     GradBrush := TGPLinearGradientBrush.Create(MakePoint(R.Left, 10),
       MakePoint(R.Right, 10), GPClr1, GPClr2);
+
     GDIP.FillPie(GradBrush, MakeRect(R), 0, 180);
     GradBrush.Free;
-    GPen.Free;
+    //GPen.Free;
 
     if (boOutLines in Options) or ItmClrsMultiseries then
     begin
@@ -11508,7 +11693,6 @@ var
         GPClr1 := MakeGPClr(LastClr);
         Clr := ChangeColor(LastClr, d3_GradientCylinder);
         GPClr2 := MakeGPClr(Clr);
-
         GradBrush := TGPLinearGradientBrush.Create(MakePoint(R.Left, 10),
           MakePoint(R.Right, 10), GPClr1, GPClr2);
         GDIP.FillPie(GradBrush, MakeRect(R), 0, 180);
@@ -11561,11 +11745,11 @@ var
         GPts[1] := MakePoint(TopL.X, TopL.Y);
         GPts[2] := MakePoint(TopR.X, TopR.Y);
         GPts[3] := MakePoint(ABarRect.Right, ABarRect.Top);
-        GDIP.FillPolygon(GBrush, PGPPoint(@GPts[0]), 4);
-        GDIP.DrawPolygon(GPen, PGPPoint(@GPts[0]), 4);
+        GDIP.FillPolygon(FGBrush, PGPPoint(@GPts[0]), 4);
+        GDIP.DrawPolygon(FGPen, PGPPoint(@GPts[0]), 4);
       finally
-        GPen.Free;
-        GBrush.Free;
+        //GPen.Free;
+        //GBrush.Free;
       end;
     end;
 
@@ -11576,11 +11760,11 @@ var
       GPts[1] := MakePoint(TopR.X, TopR.Y);
       GPts[2] := MakePoint(BotR.X, BotR.Y);
       GPts[3] := MakePoint(BotL.X - 1, BotL.Y - 1);
-      GDIP.FillPolygon(GBrush, PGPPoint(@GPts[0]), 4);
-      GDIP.DrawPolygon(GPen, PGPPoint(@GPts[0]), 4);
+      GDIP.FillPolygon(FGBrush, PGPPoint(@GPts[0]), 4);
+      GDIP.DrawPolygon(FGPen, PGPPoint(@GPts[0]), 4);
     finally
-      GPen.Free;
-      GBrush.Free;
+      //GPen.Free;
+      //GBrush.Free;
     end;
 
     if ((boOutLines in Options) or ItmClrsMultiseries) then
@@ -11588,22 +11772,22 @@ var
       Clr := ChangeColor(Color, d3_Outline);
       SetTheColor(Clr);
       try
-        GDIP.DrawLine(GPen, ABarRect.Left, ABarRect.Top, ABarRect.Right,
+        GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Top, ABarRect.Right,
           ABarRect.Top);
         if FirstBar then
         begin
-         GDIP.DrawLine(GPen, ABarRect.Left, ABarRect.Top, TopL.X, TopL.Y);
-         GDIP.DrawLine(GPen, TopL.X, TopL.Y, TopR.X, TopR.Y);
-         GDIP.DrawLine(GPen, TopR.X, TopR.Y, BotR.X,BotR.Y);
+         GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Top, TopL.X, TopL.Y);
+         GDIP.DrawLine(FGPen, TopL.X, TopL.Y, TopR.X, TopR.Y);
+         GDIP.DrawLine(FGPen, TopR.X, TopR.Y, BotR.X,BotR.Y);
         end;
-        GDIP.DrawLine(GPen, BotR.X, BotR.Y, BotL.X, BotL.Y);
-        GDIP.DrawLine(GPen, ABarRect.Right, ABarRect.Top, TopR.X, TopR.Y);
-        GDIP.DrawLine(GPen, ABarRect.Left, ABarRect.Bottom, ABarRect.Right, ABarRect.Bottom);
-        GDIP.DrawLine(GPen, ABarRect.Left, ABarRect.Top, ABarRect.Left, ABarRect.Bottom);
-        GDIP.DrawLine(GPen, ABarRect.Right, ABarRect.Top, ABarRect.Right, ABarRect.Bottom);
+        GDIP.DrawLine(FGPen, BotR.X, BotR.Y, BotL.X, BotL.Y);
+        GDIP.DrawLine(FGPen, ABarRect.Right, ABarRect.Top, TopR.X, TopR.Y);
+        GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Bottom, ABarRect.Right, ABarRect.Bottom);
+        GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Top, ABarRect.Left, ABarRect.Bottom);
+        GDIP.DrawLine(FGPen, ABarRect.Right, ABarRect.Top, ABarRect.Right, ABarRect.Bottom);
       finally
-        GPen.Free;
-        GBrush.Free;
+        //GPen.Free;
+        //GBrush.Free;
       end;
     end;
   end;
@@ -12264,9 +12448,14 @@ begin
        end;
     end;
   finally
-    FGDIP.Free;
+    if not Writer.InState(stAnimating) then
+    begin
+      FGDIP.ReleaseHDC(Canvas.Handle);
+      FreeAndNil(FGDIP);
+    end;
     FOverlaps.Free;
   end;
+
 end;
 
 function TCWBar.GetBarSpace(var BlockWidth: integer;
@@ -12407,11 +12596,15 @@ begin
   FSeriesTitleFont.OnChange := TitleFontChange;
   FCanDrawText := True;
   FOptions := [poAllowImages];
+  FGBrush := TGPSolidBrush.Create(0);
+  FGPen := TGPPen.Create(0);
 end;
 
 destructor TCWPie.Destroy;
 begin
   FSeriesTitleFont.Free;
+  FGBrush.Free;
+  FGPen.Free;
   inherited;
 end;
 
@@ -12622,8 +12815,6 @@ const
 
   procedure DoDraw(ASource: TSeries);
   var
-    GPen: TGPPen;
-    GBrush: TGPSolidBrush;
     SeritIndx: integer;
     Overlaps : TOverlaps;
 
@@ -12635,8 +12826,8 @@ const
       R := GetRValue(Clr);
       G := GetGValue(Clr);
       B := GetBValue(Clr);
-      GBrush := TGPSolidBrush.Create(MakeColor(255, R, G, B));
-      GPen := TGPPen.Create(MakeColor(255, R, G, B), 0);
+      FGBrush.SetColor(MakeColor(255, R, G, B));
+      FGPen.SetColor(MakeColor(255, R, G, B));
     end;
 
     procedure DrawPieSlice(Serit: TSeriesItems; ItmIndex: integer;
@@ -12690,12 +12881,12 @@ const
             Inc(Ar.Top, ShadowSize);
             {Lower the top with the sahdow size to synchronize the center points.
             This makes the draw rect somewhat oval}
-            GDIP.DrawArc(GPen, MakeRect(AR.Left, AR.Top,
+            GDIP.DrawArc(FGPen, MakeRect(AR.Left, AR.Top,
               AR.Width, AR.Height), LastAngle, Angle);
           end
           else
             AR := DrawRect;
-          GDIP.FillPie(GBrush, MakeRect(AR.Left, AR.Top,
+          GDIP.FillPie(FGBrush, MakeRect(AR.Left, AR.Top,
            AR.Width, AR.Height), LastAngle, Angle);
           if DoughNut then
             Exit;
@@ -12711,14 +12902,12 @@ const
             GDIP.SetClip(ClipRgn,CombineModeReplace);
          end;
 
-         GDIP.FillPie(GBrush, MakeRect(AR.Left, AR.Top,
+         GDIP.FillPie(FGBrush, MakeRect(AR.Left, AR.Top,
            AR.Width, AR.Height), LastAngle, Angle);
-         GDIP.DrawPie(GPen, MakeRect(AR.Left, AR.Top, AR.Width,
+         GDIP.DrawPie(FGPen, MakeRect(AR.Left, AR.Top, AR.Width,
           AR.Height), LastAngle, Angle);
         end;
       finally
-        GBrush.Free;
-        GPen.Free;
         if ShadowPie = 0 then
         begin
          GDIP.ResetClip;
@@ -13193,10 +13382,8 @@ const
         if not (Style=psDisc) then
         begin
           SetTheColor(Writer.Chart.GraphBGColor);
-          GDIP.FillEllipse(GBrush, MakeRect(L, T, wd, hd));
-          GDIP.DrawEllipse(GPen, MakeRect(L, T, wd, hd));
-          GPen.Free;
-          GBrush.Free;
+          GDIP.FillEllipse(FGBrush, MakeRect(L, T, wd, hd));
+          GDIP.DrawEllipse(FGPen, MakeRect(L, T, wd, hd));
           ASource.FDoughnutRect := Rect(L, T, L+wd, T+hd);
           if (poPrintSeriesTitles in Options)
           and (poPrintTitlesInDoughnut in Options) then
@@ -13244,9 +13431,7 @@ const
           end;
         Inc(R.Top, ShadowSize);
         SetTheColor(Writer.Chart.GraphBGColor);
-        GDIP.FillEllipse(GBrush, MakeRect(R));
-        GPen.Free;
-        GBrush.Free;
+        GDIP.FillEllipse(FGBrush, MakeRect(R));
         ASource.FDoughnutRect := R;
         if (poPrintSeriesTitles in Options)
           and (poPrintTitlesInDoughnut in Options) then
@@ -13308,11 +13493,10 @@ const
         begin
            if (Writer.Chart.GraphBGColor = clSilver)
            or (Writer.Chart.GraphBGColor = clBtnFace) then
-             GPen := TGPPen.Create(MakeGPClr(clBlack))
+             FGPen.SetColor(MakeGPClr(clBlack))
            else
-             GPen := TGPPen.Create(MakeGPClr(clSilver));
-           GDIP.DrawEllipse(GPen, MakeRect(OuterRect));
-           GPen.Free;
+             FGPen.SetColor(MakeGPClr(clSilver));
+           //GDIP.DrawEllipse(FGPen, MakeRect(OuterRect));
            Writer.FAnimInfo.AnimInit := false;
         end;
       end;
@@ -13659,7 +13843,11 @@ begin
     end;
 
   finally
-    FGDIP.Free;
+    if not Writer.InState(stAnimating) then
+    begin
+     FGDIP.ReleaseHDC(Canvas.Handle);
+     FreeAndNil(FGDIP);
+    end;
   end;
 end;
 
@@ -16683,6 +16871,7 @@ begin
     if (Bullets <> lbNone) or (Transparency < 255) or
       (Anchoring in [anSeriesOutside, anPointInside]) then
     begin
+      GDIP.ReleaseHDC(Canvas.Handle);
       GDIP.Free;
       GPen.Free;
       GBrush.Free;
@@ -17866,32 +18055,7 @@ begin
 end;
 
 procedure TChartWriter.DoAnimation;
-var
-  Cnt: integer;
-  Boost: integer;
-  LS: TSeries;
-  Delay: integer;
-  Freq: integer;
-  Tick : LongWord;
-  AP : LongWord;
-  function GetSpeed: integer;
-  begin
-    Result := 0;
-    case TCWAxisGraph(ActiveGraph).AnimationSpeed of
-      asFast:
-        Result := AnimationTuner.FastFreq;
-      asMediumFast:
-        Result := AnimationTuner.MediumFastFreq;
-      asMediumSlow:
-        Result := AnimationTuner.MediumSlowFreq;
-      asSlow:
-        Result := AnimationTuner.SlowFreq;
-    end;
-  end;
-
 begin
-  Delay := AnimationTuner.Delay;
-  LS := FLongestSeries;
   if ActiveGraph is TCWCurve then
     TCWCurve(ActiveGraph).Animations := [anFlow];
 
@@ -17900,109 +18064,31 @@ begin
   Repaint; { Draw labels and lines, but not the graph, to the screen }
   ClearState(stInitAnimation);
   SetState(stAnimating); { Run }
-  Freq := GetSpeed;
-  Cnt := 0;
   SaveSelBM;
-
-  if ActiveGraph is TCWBar then
-    Boost := TCWAxisGraph(ActiveGraph).AnimationBooster
-  else
-    Boost := 0;
-
-  if Boost < 0 then
-    Delay := Delay + Abs(Boost * 10);
-
-  while InState(stAnimating) do
-  begin
-    Repaint;
-    if (ActiveGraph is TCWPie) or (anGrow in TCWAxisGraph(ActiveGraph).Animations) then
-    begin
-      if Freq > 0 then
-        if Cnt mod Freq = 0 then
-          Sleep(Delay);
-    end
-    else
-    begin
-      if Boost = 0 then
-      begin
-        if Freq > 0 then
-        begin
-          if Cnt mod Freq = 0 then
-            Sleep(Delay);
-        end
-        else
-          Sleep(0);
-      end
-      else
-      begin
-        if Boost > 0 then
-        begin
-          if Freq = 0 then
-            Sleep(0)
-          else if Cnt mod (Freq + Boost) = 0 then
-            Sleep(Delay);
-        end
-        else
-          Sleep(Delay);
-      end;
-    end;
-    inc(Cnt);
-    if ActiveGraph is TCWBar then
-    begin
-      if (TCWBar(ActiveGraph).AnimationPause <> 0) and FAnimInfo.Paused and
-        (TCWBar(ActiveGraph).Layout = blSideBySide) and
-        (FAnimInfo.NextHorz < Count * LS.Count) then
-      with ActiveGraph as TCWBar do
-      begin
-       if AnimationPause > 0 then
-       begin
-         AP := LongWord(AnimationPause);
-         Tick := GetTickCount + AP;
-         while GetTickCount < Tick do
-          begin end;
-          // Application.ProcessMessages;
-           {ProcessMessages paints a black screen after approx 1000 ms. Why?}
-         FAnimInfo.Paused := false;
-       end
-       else
-       begin
-        SetState(stAnimationPause);
-        SaveSelBM;
-        while InState(stAnimationPause) do
-        begin
-          Application.ProcessMessages; {Manual resume. No black screen here!?}
-        end;
-       end;
-      end;
-    end
-    else if FAnimInfo.Paused then
+  FAnimBM := Vcl.Graphics.TBitmap.Create;
+  try
+    FAnimBM.Assign(FSelBM);
+    DoubleBuffered := false;
     with ActiveGraph do
     begin
-       if AnimationPause > 0 then
-       begin
-         AP := LongWord(AnimationPause);
-         Tick := GetTickCount + AP;
-         while GetTickCount < Tick do
-         begin end;
-         FAnimInfo.Paused := false;
-       end
-       else
-       begin
-        SetState(stAnimationPause);
-        SaveSelBM;
-        while InState(stAnimationPause) do
-        begin
-          Application.ProcessMessages;
-        end;
-        FAnimInfo.Paused := false;
-       end;
+     FGDIP := TGPGraphics.Create(Canvas.Handle);
+     FGDIP.SetSmoothingMode(SmoothingModeAntiAlias);
+     FGDIP.SetInterpolationMode(InterpolationMode.InterpolationModeHighQuality);
+     FGDIP.SetCompositingQuality(CompositingQuality.CompositingQualityHighQuality);
     end;
+    Repaint; {Get it going}
+    DoubleBuffered := True;
+    with ActiveGraph do
+    begin
+      if FGDIP <> nil then
+      begin
+        FGDIP.ReleaseHDC(Canvas.Handle);
+        FGDIP.Free;
+      end;
+    end;
+  finally
+    FAnimBM.Free;
   end;
-
-  ClearState(stAnimationPause);
-  ClearState(stResumeAnimation);
-  Chart.FHasAnimated := True;
-  Repaint;
 end;
 
 procedure TChartWriter.InitAnimation;
@@ -18059,10 +18145,12 @@ end;
 
 procedure TChartWriter.CorrectPie;
 begin
-    with ActiveGraph as TCWPie do
+    with (ActiveGraph as TCWPie)  do
     begin
     {3D pies does not diplay correctly unless this trick is done.
     Unclear reason. Should be corrected i DrawPie.}
+   // if Animation then
+   //   Exit;
       if Style = psDisc then
       begin
         FStyle := psFlat;
@@ -20159,7 +20247,7 @@ var
 begin
   if Chart = nil then
     Exit;
-  if InState(stAnimationPause) then
+  if InState(stAnimationPause) or InState(stAnimating) then
     Exit;
   FHintText := '';
   if (FSeriesData.Count = 0) or InState(stUpdating) or InState(stInternalAction) then
@@ -20260,6 +20348,10 @@ begin
   begin
     ClearState(stAnimationPause);
     SetState(stResumeAnimation);
+    Exit;
+  end;
+  if InState(stAnimating) then
+  begin
     Exit;
   end;
   SetFocus;
@@ -20551,7 +20643,8 @@ procedure TChartWriter.KeyU(Key: word; Shift: TShiftState);
 var
   MP: TPoint;
 begin
-  if (FSeriesData.Count = 0) or InState(stUpdating) or InState(stInternalAction) then
+  if (FSeriesData.Count = 0) or InState(stUpdating) or InState(stInternalAction)
+  or InState(stAnimating) then
     Exit;
   if not MouseInfoControl then
     Exit;
@@ -21545,6 +21638,7 @@ var
   MP: TPoint;
   i: integer;
   UniqueGraphs : TList<TCWGraph>;
+  Cnt : integer;
 
   procedure RedrawPoints;
   var
@@ -22147,31 +22241,37 @@ begin
     try
       if InState(stAnimating) and not InState(stInitAnimation) and (VisibleCount > 0) then
       begin
-        if InState(stAnimationPause) or InState(stResumeAnimation) then
-        begin
-          Canvas.Draw(0, 0, FSelBM);
-          ClearState(stResumeAnimation);
-          if InState(stAnimationPause) then
-            Exit;
-        end;
-        {The animations loop}
+        {The animation loop}
         UniqueGraphs := TList<TCWGraph>.Create;
+        Cnt := 0;
         try
-        for I := 0 to Chart.SeriesDefs.Count-1 do
-        begin
-         if UniqueGraphs.IndexOf(Chart.SeriesDefs[i].Graph) <> -1 then
-          Continue;
-         Chart.SeriesDefs[i].Graph.Draw;
-         UniqueGraphs.Add(Chart.SeriesDefs[i].Graph);
-        end;
+          DrawBorders;
+          while InState(stAnimating) do
+          begin
+            ActiveGraph.SetDelay(Cnt);
+            UniqueGraphs.Clear;
+            for I := 0 to Chart.SeriesDefs.Count-1 do
+            begin
+             if UniqueGraphs.IndexOf(Chart.SeriesDefs[i].Graph) <> -1 then
+              Continue;
+
+             Chart.SeriesDefs[i].Graph.Draw;
+             Canvas.Draw(0,0, FAnimBM);
+             UniqueGraphs.Add(Chart.SeriesDefs[i].Graph);
+             inc(Cnt);
+            end;
+          end;
         finally
           UniqueGraphs.Free;
         end;
-        DrawBorders;
-        Exit;
+
+       ClearState(stAnimationPause);
+       ClearState(stResumeAnimation);
+       Chart.FHasAnimated := True;
+       Exit;
       end;
       if ViewMode = vmSelected then
-      { Selected draw the saved bitmap (selBM) and do not need running
+      {Selected draw the saved bitmap (selBM) and do not need running
         the whole paint procedure }
       begin
         R := SelRect;
@@ -23242,12 +23342,13 @@ var
         if ImgFileName <> '' then
         begin
          try
+          ImgFileName := ExtractFileDir(AFileName) + '\' + ImgFileName;
           Clr.Image.Bitmap.TransparentMode := tmAuto;
           Clr.Image.LoadFromFile(ImgFileName);
           Clr.Image.Bitmap.PixelFormat := pf24Bit;
           Clr.Image.Bitmap.Transparent := True;
          except
-           GoBackError;
+           //GoBackError;
            raise;
          end;
         end;
@@ -23981,6 +24082,7 @@ begin
      if ThisChart <> nil then
      begin
        FChart := ThisChart;
+       CreateIDS;
        LoadFromcache;
        Execute;
      end
@@ -24214,10 +24316,10 @@ begin
         begin
          Clr := Chart.Categories.Items[j];
          Clr.FImageFileName := WorkSL[i];
+         Clr.FImageFileName := ExtractFileDir(AFileName) + '\' + Clr.FImageFileName;
          try
           Clr.Image.LoadFromFile(Clr.FImageFileName);
          except
-           GoBackError;
            raise;
          end;
          inc(j);
@@ -24237,13 +24339,6 @@ begin
      FirstIndex := 0;
     end;
 
-   { if (Indx = 0) and TimSpan  then
-      Inc(Indx);
-    if Indx = -1 then
-      FirstIndex := 0
-    else
-      FirstIndex := Indx;
-    }
     for i := Indx to WorkSl.Count - 1 do
     begin
       S := WorkSl[i];
@@ -24569,6 +24664,7 @@ var
       if FImageSize.cx > 0 then
       begin
         ImgFileName := GetImageFileName(AFileName, i);
+        ImgFileName := ExtractFileName(ImgFileName);
         Clrs.Items[i].Image.Bitmap.SaveToFile(ImgFileName);
       end;
       SetKeyVal(saveSL, C_ImageFileName, ImgFileName);
@@ -24865,6 +24961,7 @@ var
          for i := 0 to Chart.Categories.Count-1 do
          begin
            ImgFileName := GetImageFileName(AFileName, i);
+           ImgFileName := ExtractFileName(ImgFileName);
            Chart.Categories.Items[i].Image.SaveToFile(ImgFileName);
            Savesl.Add(ImgFileName);
          end;
@@ -28302,7 +28399,7 @@ begin
 
   if Chart is TCWPieChart then
   begin
-    if TCWPie(ActiveGraph).Style = psDisc then
+    if (TCWPie(ActiveGraph).Style = psDisc) and not TCWPie(ActiveGraph).Animation then
       CorrectPie
     else
       DoRepaint;
@@ -29694,6 +29791,10 @@ Fmt := TFormatSettings.Create;
 WriterList := TWriterList.Create;
 //System.ReportMemoryLeaksOnShutdown := True;
 StrictProtection := True;
+(*Log := TStringlist.Create;
+StartLog := false;
+Plus := 0;
+Mins := 0;*)
 
 finalization
 WriterList.Free;
