@@ -1,7 +1,7 @@
 ﻿ChartWriter CWR
 [PROPERTIES]
 Chart=Chart_TempInndeling
-LiveResize=1
+LiveResize=0
 [Data]
 -20 til -10=0
 -11 til 0=43000
@@ -34,9 +34,9 @@ DiscDepth=-5
 Style=1
 StartAngle=0
 PieSliceSpacing=0
-Font=-16777208,0|0|0|0|,8,Tahoma,1
+Font=16777215,0|0|0|0|,8,Tahoma,1
 SeriesTitleFont=-16777208,0|0|0|0|,8,Tahoma,1
-KeepFontColor=0
+KeepFontColor=1
 poPrintPercentages=1
 poPrintNames=1
 poClientBorder=1
@@ -46,9 +46,12 @@ poTextBackground=0
 poPinText=0
 poPrintTitleInDoughnut=0
 poAllowImages=0
-Animation=0
-AnimationSpeed=1
-AnimationPause=0
+Duration=3000
+SplitDuration=0
+Immediate=1
+Pause=0
+anFlow=0
+anGrow=0
 [EOF]
 [PIE]
 Name=piTempinndeling
@@ -59,9 +62,9 @@ DiscDepth=-5
 Style=1
 StartAngle=0
 PieSliceSpacing=0
-Font=-16777208,0|0|0|0|,8,Tahoma,1
+Font=16777215,0|0|0|0|,8,Tahoma,1
 SeriesTitleFont=-16777208,0|0|0|0|,8,Tahoma,1
-KeepFontColor=0
+KeepFontColor=1
 poPrintPercentages=1
 poPrintNames=1
 poClientBorder=1
@@ -71,9 +74,12 @@ poTextBackground=0
 poPinText=0
 poPrintTitleInDoughnut=0
 poAllowImages=0
-Animation=0
-AnimationSpeed=1
-AnimationPause=0
+Duration=3000
+SplitDuration=0
+Immediate=1
+Pause=0
+anFlow=0
+anGrow=0
 [EOF]
 [PIE]
 Name=piTempinndeling
@@ -84,9 +90,9 @@ DiscDepth=-5
 Style=1
 StartAngle=0
 PieSliceSpacing=0
-Font=-16777208,0|0|0|0|,8,Tahoma,1
+Font=16777215,0|0|0|0|,8,Tahoma,1
 SeriesTitleFont=-16777208,0|0|0|0|,8,Tahoma,1
-KeepFontColor=0
+KeepFontColor=1
 poPrintPercentages=1
 poPrintNames=1
 poClientBorder=1
@@ -96,9 +102,12 @@ poTextBackground=0
 poPinText=0
 poPrintTitleInDoughnut=0
 poAllowImages=0
-Animation=0
-AnimationSpeed=1
-AnimationPause=0
+Duration=3000
+SplitDuration=0
+Immediate=1
+Pause=0
+anFlow=0
+anGrow=0
 [EOF]
 [LEGENDS]
 {LEGEND0}
@@ -146,6 +155,7 @@ TimeFormat=
 MouseTimeFormat=
 GraphBGColor=16777215
 GraphBorders=1
+AnimationEnabled=1
 toName=0
 toValue=0
 InnerLeftMargin=0
@@ -177,29 +187,35 @@ Visible=1
 {ITEMCOLOR0}
 Ident=-20 til -10
 Color=8388608
+ImageFileName=
 {ITEMCOLOR1}
 Ident=-11 til 0
 Color=16711680
+ImageFileName=
 {ITEMCOLOR2}
 Ident=1 til 10
 Color=16711935
+ImageFileName=
 {ITEMCOLOR3}
 Ident=11 til 20
 Color=9089279
+ImageFileName=
 {ITEMCOLOR4}
 Ident=20 til 30
 Color=255
+ImageFileName=
 {ITEMCOLOR5}
 Ident=Over 30
 Color=128
+ImageFileName=
 {NAMESCALE}
 OverflowAction=3
 NumSpanPrecision=0
-Qualifier=
 AllowImages=0
+Qualifier=
 ShowDividerLines=0
-MinLabelSpacing=5
 ShowLabels=1
+MinLabelSpacing=5
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 {VALUESCALE1}
@@ -210,20 +226,20 @@ ValueLow=0
 ValuePrecision1=0
 Qualifier=
 ShowDividerLines=0
-MinLabelSpacing=5
 ShowLabels=1
+MinLabelSpacing=5
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 {VALUESCALE2}
 ValueSpanFromData=0
 ValueIntervals=1
-ValueHigh=155
+ValueHigh=155000
 ValueLow=0
 ValuePrecision2=0
 Qualifier=
 ShowDividerLines=0
-MinLabelSpacing=5
 ShowLabels=1
+MinLabelSpacing=5
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 Pen=0,0,1,4
 [EOF]

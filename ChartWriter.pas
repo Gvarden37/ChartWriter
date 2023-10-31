@@ -21,6 +21,10 @@
 {An overview of the ChartWriter code can be found in topic "Technical overview"
 in the help file}
 
+{Issues:
+Text in hint rect overflows when values are negative?
+}
+
 
 Unit ChartWriter;
 
@@ -34,7 +38,7 @@ uses
   System.Types, Vcl.Graphics, Math, Vcl.StdCtrls, System.Messaging,
   Vcl.AppEvnts, GraphUtil,
   Messages, System.UITypes, System.Rtti, GDIPUtil, GDIPapi, GDIPObj,
-  Forms, Vcl.ExtCtrls, Data.DB;
+  Forms, Vcl.ExtCtrls, Data.DB, System.Diagnostics;
 
 const
   {Save image options}
@@ -49,6 +53,7 @@ const
   WM_ERROR = wm_user + 203;
   WM_LOADFILE = wm_user + 204;
   WM_AFTERBUILD = wm_user + 205;
+  WM_DOANIMATION = wm_User + 206;
 
   {Scale constants}
   c_HookSize = 5;
@@ -63,6 +68,9 @@ const
   AN_DifferentGraphs = 2;
   AN_AnimationNotDefined = 3;
   AN_NoSpace = 4;
+  AN_AnimationActive = 5;
+  AN_Bezier = 6;
+  AN_AreaStyle = 7;
 
   {Minnimum text space needed for bar texts}
   MinBarTextSpaceVert = 30;
@@ -124,10 +132,13 @@ const
   C_Brush = 'Brush';
   C_GraphBGColor = 'GraphBGColor';
   C_GraphBorders = 'GraphBorders';
-  C_Animation = 'Animation'; {Pie and Curve}
-  C_Animations = 'Animations'; {Bar only}
-  C_AnimationSpeed = 'AnimationSpeed';
-  C_AnimationPause = 'AnimationPause';
+  C_Active = 'Active'; {Pie and Curve}
+  C_AnimationEnabled ='AnimationEnabled';
+  C_Animations = 'Animations';
+  C_Duration = 'Duration';
+  C_Pause = 'Pause';
+  C_SplitDuration = 'SplitDuration';
+  C_Immediate = 'Immediate';
   C_AnGrow = 'anGrow';
   C_AnFlow = 'anFlow';
   C_ValueSpanFromData = 'ValueSpanFromData';
@@ -195,7 +206,7 @@ const
   C_PieSliceSpacing = 'PieSliceSpacing';
   C_poPrintPercentages = 'poPrintPercentages';
   C_poPrintValues = 'poPrintValues';
-  C_poPrintNames = 'poPrintNames';
+  C_poPrintNames =  'poPrintNames';
   C_poPrintSeriesTitles = 'poPrintSeriesTitles';
   C_poClientBorder = 'poClientBorder';
   C_poTextBackground = 'poTextBackground';
@@ -289,7 +300,7 @@ type
   {The Writer list is used to deliver Writer reference
   to the chart objects. This happens when a chart gets the focus
   It is also used to check if objects are used by more than one chart writer.
-  Relevent methods: AddToVList and CreateIDs}
+  Relevent methods: AddToVList and ConnectToWriter}
 
   TCWException = class(Exception)
     Errorcode: integer;
@@ -340,6 +351,8 @@ type
 
   TSeries = class;
   TCWChart = class;
+
+  TChartLoadList = TList<TCWChart>;
 
   TGraphObject = class
     { Base class for graph objects. Internal use }
@@ -397,9 +410,8 @@ type
   End;
 
   {Enumerrated types}
-  TAnimation = (anFlow, anGrow);
-  TAnimations = set of TAnimation;
-  TAnimationSpeed = (asFast, asMediumFast, asMediumSlow, asSlow);
+  TProgressType = (anFlow, anGrow);
+  TProgressTypes = set of TProgressType;
   TAutoSections = (autNotUsed, autDays, autDates, autWeeks, autMonths, autYears);
   TAxisOrientation = (alBottomLeft, alBottomRight, alLeftTop, alTopLeft, alTopRight,
     alRightTop, alLeftBottom, alRightBottom);
@@ -493,6 +505,10 @@ type
     Paused: Boolean;
     StartPause: Boolean;
     Stopped: Boolean;
+    VertFinished : Boolean;
+    SeriesFinished : Boolean;
+    OverflowCount : integer; {The number of frames that exceeds the size of a bar.
+    Relevant with the [anGrow,anFlow] combination}
   end;
 
   TAnimationTuner = record
@@ -625,12 +641,16 @@ type
   TLegContentList = TObjectList<TStringList>;
   {Stores the texts collected by CreateLegendContent}
 
+  TCWAnimationDef = class;
+  TValueAxis = class;
+
   TCWGraph = class(TComponent)
   {Base class graphs}
   private
-    FAnimation : Boolean;
-    FAnimationPause : Integer;
-    FAnimationSpeed: TAnimationSpeed;
+    FAnimationDef : TCWAnimationDef;
+    FAnimFrameCount : integer;
+    FAnimFrameSize : integer;
+    FAnimMeasuring : Boolean;
     FFont : TFont;
     FGDIP: TGPGraphics;
     FKeepFontColor : Boolean;
@@ -638,23 +658,23 @@ type
     FPaintSeriesIndex : integer;
     FWID : TWriterListElement;
     FWriter: TChartWriter; {Not used? FWID instead}
+
     function GetActiveColor : TColor;
     function GetCanvas: TCanvas;
     function GetChart : TCWChart;
     function GetInternalActiveColor(SeriesIndex, ItemIndex : integer): TColor; virtual;
     function GetSeries(Value : integer) : TSeries;
     function GetWriter : TChartWriter;
+    function GetValueAxis(Index : integer) : TValueAxis;
     procedure FontChange(Sender : TObject);
     procedure SetActiveColor(const Value : TColor);
-    procedure SetAnimation(const Value : Boolean);
-    procedure SetDelay(Counter : integer);
+    procedure SetAnimFrameCount; virtual;
     procedure SetInternalActiveColor(SeriesIndex, ItemIndex : integer; Value : TColor); virtual;
     procedure SetKeepFontColor(const Value : Boolean);
     property InternalActiveColor[SeriesIndex, ItemIndex : integer] : TColor
      read GetInternalActiveColor write SetInternalActiveColor;
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
-    property Animation: Boolean read FAnimation write SetAnimation default False;
     property Canvas: TCanvas read GetCanvas;
     property GDIP: TGPGraphics read FGDIP;
   public
@@ -668,11 +688,30 @@ type
     property Writer: TChartWriter read GetWriter;
 
   published
-    property AnimationPause : integer read FAnimationPause write FAnimationPause default 0;
-    property AnimationSpeed: TAnimationSpeed read FAnimationSpeed
-      write FAnimationSpeed default asMediumFast;
+    property AnimationDef : TCWAnimationDef read FAnimationDef write FAnimationDef;
     property Font : TFont read FFont write FFont;
     property KeepFontColor : Boolean read FKeepFontColor write SetKeepFontColor;
+  end;
+
+  TCWAnimationDef = class(TPersistent)
+  private
+    FDuration : integer;
+    FImmediate : Boolean;
+    FPause : integer;
+    FSplitDuration : Boolean;
+    FProgressTypes : TProgressTypes;
+    FGraph : TCWGraph;
+    function GetActive : Boolean;
+    procedure SetProgressTypes(const Value : TProgressTypes);
+    procedure SetDuration(const Value : integer);
+  public
+    property Active : Boolean read GetActive;
+  published
+    property ProgressTypes : TProgressTypes read FProgressTypes write SetProgressTypes default [];
+    property Immediate : Boolean read FImmediate write FImmediate default True;
+    property Duration : integer read FDuration write SetDuration default 3000;
+    property Pause : integer read FPause write FPause default 0;
+    property SplitDuration : Boolean read FSplitDuration write FSplitDuration default false;
   end;
 
   TChartListItem = class
@@ -724,8 +763,6 @@ type
   TCWAxisGraph = class(TCWGraph)
   {Base for graphs that are rendered wihin an axis system: Curves and bars}
   private
-    FAnimationBooster: integer;
-    FAnimations: TAnimations;
     FDrawBaseline : Boolean;
     FHorzCounter: integer;
     FMaxPointSpacing: integer;
@@ -740,8 +777,6 @@ type
     function GetMinPointSpacing: integer; virtual; abstract;
     function GetValueScale : TCWValueScale;
     procedure DrawStatLine(GDIP : TGPGraphics; ASource : TSeries);
-    procedure SetAnimationBooster(const Value: integer);
-    procedure SetAnimations(const Value: TAnimations);
     procedure SetMaxPointSpacing(const Value: integer);
     procedure SetMinPointSpacing(const Value: integer); virtual; abstract;
     procedure SetSMAPeriods(const Value : integer);
@@ -750,16 +785,13 @@ type
     procedure SetStatBackgroundBlending(const Value : integer);
 
   protected
-    property AnimationBooster: integer read FAnimationBooster
-      write SetAnimationBooster default 0; {published for bars}
-    property Animations: TAnimations read FAnimations write SetAnimations
-      default []; {published for barts}
     property MaxPointSpacing: integer read GetMaxPointSpacing
       write SetMaxPointSpacing default 0;
     property MinPointSpacing: integer read GetMinPointSpacing
       write SetMinPointSpacing;
   public
     constructor Create(AOwner: TComponent); override;
+    function GetCompressPercentage : single;
     function QuerySpace(ItemCount : integer=-1): integer; virtual;
     function SeriesCount : integer;
     property ValueScale : TCWValueScale read GetValueScale;
@@ -785,17 +817,20 @@ type
     function GetStyle(ASeries: TSeries): TCWSeriesStyle;
     function IndexOf(const ASeriesTitle: string): integer;
     function IndexOfStyle(const AStyle : TCurveStyle) : integer;
-    procedure ApplyOnAll(AStyle : TCurveStyle; ALineStyle : TCurveLineStyle; ALineWidth : integer);
+    procedure ApplyOnAll(AStyle : TCurveStyle; ALineStyle : TCurveLineStyle; ALineWidth : integer;
+     ABaselineValue : single);
     procedure Assign(Source: TPersistent); override;
     property Items[AIndex: integer]: TCWSeriesStyle read GetItem write SetItem;
   end;
 
   TCWSeriesStyle = class(TCollectionItem)
   private
+    FBaselineValue : single;
     FLineStyle: TCurvelineStyle;
     FLineWidth: integer;
     FStyle: TCurveStyle;
     FSeriesTitle: string;
+    procedure SetBaseLineValue(const Value : single);
     procedure SetLineStyle(const Value: TCurvelineStyle);
     procedure SetLineWidth(const Value: integer);
     procedure SetStyle(const Value: TCurveStyle);
@@ -806,6 +841,7 @@ type
     constructor Create(Collection: TCollection); override;
     procedure Assign(Source: TPersistent); override;
   published
+    property BaseLineValue : single read FBaseLineValue write SetBaseLineValue;
     property LineStyle: TCurvelineStyle read FLineStyle write SetLineStyle
       default lsSolid;
     property LineWidth: integer read FLineWidth write SetLineWidth default 1;
@@ -875,6 +911,7 @@ type
     FOnMouseEnterPoint: TMouseItemEvent;
     FOnMouseLeavePoint: TMouseItemEvent;
     function BeaconsActive: Boolean;
+    function GetActiveBaselineValue(ASeries : TSeries): single;
     function GetActiveLineStyle(ASeries : TSeries): TCurvelineStyle;
     function GetActiveLineWidth(ASeries: TSeries): integer;
     function GetActiveStyle(ASeries: TSeries): TCurveStyle;
@@ -893,9 +930,11 @@ type
       x1, y1, x2, y2: integer; StatLine : Boolean = false);
     procedure DrawBezierCurve(ASource : TSeries);
     procedure DrawBezierBaselineArea(ASource : TSeries; Pts : TPointDynArray);
+    procedure SetActiveBaselineValue(ASeries : TSeries; Value: single);
     procedure SetActiveLineStyle(ASeries : TSeries; Value: TCurvelineStyle);
     procedure SetActiveLineWidth(ASeries: TSeries; Value: integer);
     procedure SetActiveStyle(ASeries: TSeries; Value: TCurveStyle);
+    procedure SetAnimFrameCount; override;
     procedure SetAreaOutline(const Value : Boolean);
     procedure SetAreaOutlineColor(const Value : TColor);
     procedure SetBaseLineValue(const Value: single);
@@ -922,9 +961,11 @@ type
       read GetActiveLineWidth write SetActiveLineWidth;
     property ActiveStyle[ASeries: TSeries]: TCurveStyle
       read GetActiveStyle write SetActiveStyle;
+    property ActiveBaselineValue[ASeries: TSeries] : single
+      read GetActiveBaseLineValue write SetActiveBaseLineValue;
     property UseSeriesStyles: Boolean read GetUseSeriesStyles;
   published
-    property Animation;
+    property AnimationDef;
     property AreaBrush: TBrush read FAreaBrush write FAreaBrush;
     property AreaOutline : Boolean read FAreaOutline write SetAreaOutline default false;
     property AreaOutlineColor : TColor read FAreaOutlineColor write SetAreaOutlineColor default clBlack;
@@ -985,6 +1026,7 @@ type
       BottomLeftPt, BottomRightPt: TPoint);
     procedure Get3DWH(ARect: TRect; var AWidth, AHeight: integer);
     procedure GetCathesus(ARect : TRect; var HorzCath, VertCath: integer);
+    procedure SetAnimFrameCount; override;
     procedure SetAutoSize(const Value : Boolean);
     procedure SetBarStyle(const Value: TBarStyle);
     procedure SetBarWidth(const Value: integer);
@@ -1015,8 +1057,6 @@ type
     property TextQualifier: string read GetTextQualifier;
 
   published
-    property AnimationBooster;
-    property Animations;
     property AutoSize : Boolean read FAutoSize write SetAutoSize;
     property BarStyle: TBarStyle read GetBarStyle write SetBarStyle default bsFlat;
     property BarWidth: integer read GetBarWidth write SetBarWidth default 20;
@@ -1064,6 +1104,7 @@ type
     function GetInternalActiveColor(SeriesIndex, ItemIndex : integer): TColor; override;
     function GetTitleSpace : integer;
     function GetWidth : integer;
+    procedure SetAnimFrameCount; override;
     procedure SetDiscDepth(const Value: integer);
     procedure SetDoughnutSize(const Value: integer);
     procedure SetInternalActiveColor(SeriesIndex, ItemIndex : integer; Value : TColor); override;
@@ -1083,7 +1124,7 @@ type
     property Height : integer read GetHeight;
     property Width : integer read GetWidth;
   published
-    property Animation;
+    property AnimationDef;
     property DiscDepth: integer read FDiscDepth write SetDiscDepth default -5;
     property DoughnutSize: integer read FDoughnutSize write SetDoughnutSize default 0;
     property OnDrawPieSlice: TDrawPieSliceEvent read FOnDrawPieSlice  write FOnDrawPieSlice;
@@ -1240,8 +1281,6 @@ type
     property Chart : TCWChart read GetChart;
     property Items[AIndex: integer]: TCWSeriesDef read GetItem write SetItem; default;
   end;
-
-  TValueAxis = class;
 
   TCWSeriesDef = class(TCollectionItem)
   private
@@ -1812,12 +1851,11 @@ type
     FCategories: TCWCategories;
     FCWRFileName : string;
     FDataset : TDataset;
-    FFileName : TFileName;
+    FDataFileName : TFileName;
     FGradientWall: Boolean;
     FGraphBGColor : TColor;
     FGraphBorders : TGraphBorders;
     FGraphMargins: TCWMargins;
-    FHasAnimated : Boolean;
     FInnerMargins: TCWMargins;
     FLegends : TCWLegends;
     FMouseTimeFormat : string;
@@ -1853,7 +1891,7 @@ type
     function ColorUsage : TColorUsage;
     function GetAxisCount : integer;
     function GetDataset : TDataset;
-    function GetFileName : TFileName;
+    function GetFileName : string;
     function GetMouseTimeFormat : string;
     function GetNameDBField : string;
     function GetNameType : TNameType;
@@ -1874,7 +1912,7 @@ type
     procedure SetAlternativeGraph(const Value : TCWGraph);
     procedure SetAxisOrientation(const Value: TAxisOrientation);
     procedure SetDataset(const Value : TDataset);
-    procedure SetFileName(const Value : TFileName);
+    procedure SetDataFileName(const Value : TFileName);
     procedure SetGradientWall(const Value: Boolean);
     procedure SetGraphBGColor(const Value : TColor);
     procedure SetGraphBorders(const Value : TGraphBorders);
@@ -1919,11 +1957,9 @@ type
     destructor Destroy; override;
     function AddLegend : TCWLegend;
     function AllEqual : TCWGraph;
-    function CanAnimate : integer;
     function GraphCount(AGraph : TCWGraph) : integer;
     function IsActive : Boolean;
     function IsCached : Boolean;
-    function PerformAnimation : integer;
     procedure AddSeriesDef(AGraph : TCWGraph);overload;
     procedure AddSeriesDef(ATitle : string; AGraph : TCWGraph; AColor : TColor;
       AValueAxis : TValueScaleNumber);overload;
@@ -1936,17 +1972,17 @@ type
     procedure SaveCache;
     procedure SetSeriesDef(Index : integer; ATitle : string; AGraph : TCWGraph;
       AColor : TColor; AValueAxis : TValueScaleNumber);
-    property AnimationEnabled : Boolean read FAnimationEnabled write FAnimationEnabled;
+    property FileName : string read GetFileName;
     property AxisCount : integer read GetAxisCount;
-    property HasAnimated : Boolean read FHasAnimated write FHasAnimated;
     property VisibleCount : integer read GetVisibleCount;
     property Writer: TChartWriter read GetWriter;
     property Zoomed : Boolean read GetZoomed;
     property ZoomEnd : integer read FZoomEnd;
     property ZoomStart : integer read FZoomStart;
   published
+    property AnimationEnabled : Boolean read FAnimationEnabled write FAnimationEnabled default true;
+    property DataFileName : TFileName read FDataFileName write SetDataFileName;
     property Dataset : TDataset read GetDataset write SetDataset;
-    property FileName : TFileName read GetFileName write SetFileName;
     property GraphBGColor : TColor read FGraphBGColor write SetGraphBGColor default clWindow;
     property GraphMargins: TCWMargins read FGraphMargins write FGraphMargins;
     property InnerMargins: TCWMargins read FInnerMargins write FInnerMargins;
@@ -2036,6 +2072,11 @@ type
     FAlfaBM: Vcl.Graphics.TBitmap; {Transparent layer used with mouse sselection}
     FAnimBM: Vcl.Graphics.TBitmap;
     FAnimInfo: TAnimInfo; {Used by the animation engine: DoAnimation}
+    FAnimCounter : integer;
+    FAnimFrameTime : integer;
+    FAnimStamp : Boolean; {Used to identify a rendering originated from the animation loop}
+    FAnimTimer : TTimer;
+    FAnimRunning : Boolean;
     FAppEvent: TApplicationEvents;
     FBall: Vcl.Graphics.TBitmap;
     FBallSmall: Vcl.Graphics.TBitmap;
@@ -2048,6 +2089,7 @@ type
     FDsgnData : TObjectList<TStringList>;
     FDynaSectStart, FDynaSectEnd: integer; {Tracking mouse zoom}
     FFormHandle: Hwnd;
+    FHasAnimated : Boolean;
     FHintItem: integer; {The item that displays the mouse move hint }
     FHintSeries: integer; {The Series that displays the mouse move hint }
     FHintText: string;
@@ -2061,6 +2103,10 @@ type
     FLastMouseX: integer; {Tracking mouse travel distance horz}
     FLastMouseY: integer; {Tracking mouse travel distance vert}
     FLeapdateCount: integer;
+    FLoadExec : Boolean; {Load from file and execute}
+    FLoading : Boolean;
+    {Loaded sets this flag. It is used to postpone DoAnimation when LoadFromFile is
+    called at application start up. See DoAnimation}
     FLogYearMap: array of TYearMap;
     FMouseDistanceX: integer;
     FMouseDistanceY: integer;
@@ -2081,6 +2127,7 @@ type
     FSelstartY: integer;
     FSeriesData: TData;
     FStates: TStates;
+    FStopWatch : TStopWatch;
     FTallestName: string;
     FTallestNameSection: string;
     FTallestNameShortSection: string;
@@ -2156,12 +2203,15 @@ type
     FOnDataChange: TNotifyEvent;
     FOnDrawSection: TDrawSectionEvent;
     FOnDrawLabel: TDrawLabelEvent;
+    FOnEndAnimation : TNotifyEvent;
     FOnLoadFile : TLoadFileEvent;
     FOnMeasureLabel: TMeasureLabelEvent;
     FOnMouseInfo: TMouseInfoEvent;
     FOnQuerySpace : TQuerySpaceEvent;
     FOnRuler: TNotifyEvent;
     FOnSelected: TNotifyEvent;
+    FOnStartAnimation : TNotifyEvent;
+    FOnSuspendAnimation : TNotifyEvent;
     FOnZoom: TNotifyEvent;
 
     function AxisOf(Posit: TAxisPosition): TAxisObject;
@@ -2271,6 +2321,7 @@ type
     function YFromName(AValue: string): integer;
     procedure AddDsgnSeries(ASpanType : TSpanType; indx : integer);
     procedure AddSeries(ASeries: TSeries; Internal: Boolean = False); overload;
+    procedure AnimTimer(Sender : TObject);
     procedure AppMsg(var Msg: tagMsg; var Handled: Boolean);
     procedure AssignOrigData;
     procedure CancelBeacons;
@@ -2279,13 +2330,13 @@ type
     procedure ComputePoints(ASeries: TSeries = nil; Recalc: Boolean = False);
     procedure ComputeTextExtent;
     procedure ConcludeSelecting(XPos, YPos: integer);
-    procedure CorrectPie;
+    procedure ConnectToWriter;
     procedure CreateAutoSections;
-    procedure CreateIDS;
     procedure CreateNameSections;
     procedure CreateValueSections;
     procedure CreateSpan;
     procedure DoAnimation;
+    procedure DoInitAnimation;
     procedure DoContraction(Rate: integer; ContractType: TContractionType);
     procedure DoLoadFiles(AFileName: string; Files: TFiles);
     procedure DoRepaint;
@@ -2294,7 +2345,6 @@ type
     procedure DrawBorders;
     procedure GetProps(PropList: TStringList);
     procedure GoBackError(DoReload : Boolean = false);
-    procedure InitAnimation;
     procedure InternalClear;
     procedure KeyD(Key: word; Shift: TShiftState);
     procedure KeyU(Key: word; Shift: TShiftState);
@@ -2350,6 +2400,7 @@ type
     procedure SetWallColor(const Value: TColor);
     procedure SetWallWidth(const Value: integer);
     procedure WMAFTERBUILD(var Msg : TMessage); message WM_AFTERBUILD;
+    procedure WMDOANIMATION(var Msg : TMessage); message WM_DOANIMATION;
     procedure WMENDEXEC(var Msg: Tmessage); message WM_ENDEXEC;
     procedure WMERASEBKGND(var Msg: TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure WMERROR(var Msg: Tmessage); message WM_ERROR;
@@ -2358,6 +2409,7 @@ type
     procedure WMREFRESHCHART(var Msg : TMessage); message WM_REFRESHCHART;
     procedure WMSAVESELBM(var Msg: Tmessage); message WM_SAVESELBM;
     property ActiveValueScale : TCWValueScale read GetActiveValAx;
+    property HasAnimated : Boolean read FHasAnimated write FHasAnimated;
     property InternalChartList: TInternalChartList read FInternalChartList;
     property NameFloatUnit: single read GetNameFloatUnit;
     property NameUnit: integer read FNameUnit write SetNameUnit;
@@ -2389,6 +2441,7 @@ type
     function BaseNameInterval: integer; { The original intervals between the names in
     spanned series, as set by the user.
     When computing Contraction this value is subtracted from the result. }
+    function CanAnimate : integer;
     function CanContract : integer;
     function CanRender: integer;
     function CanScroll(ScrollType: TScrollType): Boolean;
@@ -2404,6 +2457,7 @@ type
     function IndexOfNameEx(AName: string): integer; { In the orig list }
     function IndexOfTimeEx(H, M, S: integer): integer;
     function IsAnimating : Boolean;
+    function IsAnimationSuspended : Boolean;
     function IsAxisChart(AChart : TCWChart = nil) : Boolean;
     function IsCompressed : Boolean;
     function IsContractionIdle : Boolean;
@@ -2412,6 +2466,7 @@ type
     function MouseInPieSlice(var SeriesIndex, SeriesItemIndex: integer) : Boolean;
     function MouseInPoint(var SeriesIndex, SeriesItemIndex: integer): Boolean;
     function NamValFromPos(const X, Y: integer; var Nam: string; var Val: single): Boolean;
+    function PerformAnimation : integer;
     function PosFromDate(ADate: TDateTime): integer;
     function PosFromHour(ADate: TDateTime): integer;
     function PosFromMinute(ADate: TDateTime): integer;
@@ -2452,13 +2507,14 @@ type
     procedure First;
     procedure GetValueSpan(ASeries: TSeries; var HighVal, LowVal: single); overload;
     procedure GetValueSpan(var HighVal, LowVal: single); overload;
+    procedure HaltAnimation;
     procedure HideRuler;
     procedure Last;
-    procedure LoadDataFromCWRFile(AFileName: TFileName; DoExecute : Boolean = True);
+    procedure LoadDataFromCWRFile(AFileName: TFileName);
     procedure LoadFromCache;
     procedure LoadFromDatabase(ADataset : TDataset; NameField, ValueFields : string;
-      ATitle : string = ''; DoExecute : Boolean = True);
-    procedure LoadFromFile(AFileName: TFileName; DoExecute : Boolean = True);
+      ATitle : string = '');
+    procedure LoadFromFile(AFileName: TFileName);
     procedure MoveSeries(FromIndex, ToIndex: integer);
     procedure NextPage;
     procedure NextPoint;
@@ -2468,6 +2524,7 @@ type
     procedure RenderDesigner(Deleted : integer = 0);
     procedure RepaintGraph;
     procedure ResetContraction;
+    procedure ResumeAnimation;
     procedure SaveAsImage(GraphElement: integer; AFileName: string);
     procedure SaveToFile(AFileName: TFileName; FileFormat : TSaveFormat =sfDataOnly;
       TimeType : TSaveTimeType =ttLocal);
@@ -2593,7 +2650,7 @@ type
     property ContractionType: TContractionType read FContractionType write FContractionType default ctExplicit;
     property GraphBorders: TGraphBorders read GetGraphBorders  write SetGraphBorders default gbAxis;
     property Language: string read FLanguage write SetLanguage;
-    property LiveResize : Boolean read FLIveResize write FLiveResize default true;
+    property LiveResize : Boolean read FLIveResize write FLiveResize default false;
     property MouseInfo: TMouseInfo read FMouseInfo write FMouseInfo default miBoth;
     property MousePrecision: TMousePrecision read GetMousePrecision write FMousePrecision default mpHigh;
     property MouseSelect: Boolean read FMouseSelect write FMouseSelect default True;
@@ -2601,12 +2658,15 @@ type
     property OnDataChange: TNotifyEvent read FOnDataChange write FOnDataChange;
     property OnDrawLabel: TDrawLabelEvent read FOnDrawLabel write FOnDrawLabel;
     property OnDrawSection: TDrawSectionEvent read FOnDrawSection  write FOnDrawSection;
+    property OnEndAnimation : TNotifyEvent read FOnEndAnimation write FOnEndAnimation;
     property OnLoadFile : TLoadFileEvent read FOnLoadFile write FOnLoadFile;
     property OnMeasureLabel: TMeasureLabelEvent read FOnMeasureLabel write FOnMeasureLabel;
     property OnMouseInfo: TMouseInfoEvent read FOnMouseInfo write FOnMouseInfo;
     property OnQuerySpace : TQuerySpaceEvent read FOnQuerySpace write FOnQuerySpace;
     property OnRuler: TNotifyEvent read FOnRuler write FOnRuler;
     property OnSelected: TNotifyEvent read FOnSelected write FOnSelected;
+    property OnStartAnimation : TNotifyEvent read FOnStartAnimation write FOnStartAnimation;
+    property OnSuspendAnimation : TNotifyEvent read FOnSuspendAnimation write FOnSuspendAnimation;
     property OnZoom: TNotifyEvent read FOnZoom write FOnZoom;
     property RulerGuideLines: Boolean read FRulerGuideLines write FRulerGuideLines default false;
     property Rulers: TRulers read FRulers write SetRulers default ruNone;
@@ -2620,18 +2680,16 @@ function InvertColor(Color : TColor) : TColor;
 
 var
   StrictProtection : Boolean;
-//    StartLog : Boolean;
-//    Plus, Mins : integer;
-
 
 implementation
 
 uses DateUtils, Dialogs, System.Generics.Defaults, JPEG, Vcl.Imaging.pngImage;
 
+
 var
   Fmt: TFormatSettings;
   WriterList : TWriterList;
-//  log : TStringList;
+  ChartLoadList : TChartLoadList;
   {WriterList keeps track of all graphs objects that interacts with a writer.
   Its is used to check if an object tries to link to more than one writer.
   This is not allowed and causes an exception. AddToWlist updates the list}
@@ -2693,12 +2751,12 @@ const
     { 51 } 'Alternative must be different from the first priority graph',
     { 52 } 'Cannot contract a paged diagram',
     { 53 } 'Horizontal curves are not supported',
-    { 54 } 'Undefined view member',
+    { 54 } 'Duration must be in the range 100-10000 millieconds',
     { 55 } 'Nothing to save',
     { 56 } 'Name mismatch',
     { 57 } 'Duplicate names %s',
-    { 58 } 'Section type not compatible with name type',
-    { 59 } 'Duplicate graphs not allowed',
+    { 58 } 'Grow option can only be used with bars.',
+    { 59 } 'Cannot load a chart when animation is active. Animation halted',
     { 60 } 'A graph can only be linked to one View',
     { 61 } '%s assignment requires Chart.Writer to be set',
     { 62 } 'Correlation view has no active member',
@@ -2806,12 +2864,12 @@ const
   msg_AlternativeSelf = 51;
   msg_ContractPaged = 52;
   msg_HorizontalCurves = 53;
-  msg_UndefViewMember = 54; {NotUsed}
+  msg_AnimDuration = 54;
   msg_NothingToSave = 55;
   msg_NameMismatch = 56;
   msg_DupName = 57;
-  msg_SectIncompatible = 58; {NotUsed}
-  msg_DupGraph = 59; {NotUsed}
+  msg_AnimAnimations = 58;
+  msg_LoadAnim = 59;
   msg_GraphOneView = 60; {NotUsed}
   msg_NoWriter = 61; {NotUsed}
   msg_NoMember = 62; {NotUsed}
@@ -3228,23 +3286,6 @@ begin
   Result.Obj := AnObject;
   WriterList.Add(Result);
 end;
-
-(*procedure DeleteFromWList(AWriter : TChartWriter);
-var
-  i : integer;
-  found : boolean;
-begin
-  repeat
-   found := false;
-   for I := 0 to WriterList.Count-1 do
-     if WriterList[i].Writer = AWriter then
-     begin
-       WriterList.Delete(I);
-       Found := True;
-       Break;
-     end;
-  until not found;
-end;*)
 
 function GetWriterFromWList(AnElement : TWriterListElement) : TChartWriter;
 var
@@ -3785,23 +3826,19 @@ function GetTimeStr(CW: TChartWriter; AFormat: string;
   var
     i: integer;
     y1: word;
-    Ser1: integer;
   begin
     Result := False;
     if CW.FYears.Count = 0 then
       Exit;
     y1 := CW.FYears[0].Year;
-    Ser1 := CW.FYears[0].SerIndex;
     for i := 1 to CW.FYears.Count - 1 do
     begin
-      if Ser1 <> CW.FYears[i].SerIndex then
       begin
         if y1 <> CW.FYears[i].Year then
         begin
           Result := True;
           Break;
         end;
-        Ser1 := CW.FYears[i].SerIndex;
       end;
     end;
   end;
@@ -3816,7 +3853,7 @@ begin
             AFormat := 'ddddd'
           else
           begin
-            if CompDifferentYears then
+            if not CompDifferentYears then
             begin
               AFormat := 'dd/mm'
             end
@@ -4263,7 +4300,7 @@ begin
   begin
     Obj := TObject(ItemColor[SeriesIndex, i]);
     S := ItemName[SeriesIndex, i] + '=' + FormatNum(ItemValue[SeriesIndex, i],
-      Writer.GetValPrecision); {Todo:Check}
+      Writer.GetValPrecision);
     Result.AddObject(S, Obj);
   end;
 end;
@@ -6014,13 +6051,10 @@ begin
         end;
       end;
       try
- //       if i mod LabelFreq = 0 then
-        begin
-          Canvas.Brush.Style := bsClear;
-          LabelPos := GetLabelCenterPos(S, X, Y);
-          DoWrite;
-          DrawLine;
-        end;
+        Canvas.Brush.Style := bsClear;
+        LabelPos := GetLabelCenterPos(S, X, Y);
+        DoWrite;
+        DrawLine;
       finally
         E := E + Interval;
         LastPos := LabelPos;
@@ -6090,7 +6124,7 @@ begin
     Result := 0;
     Exit;
   end;
-  Result := Writer.FNameLabelSpace; ///
+  Result := Writer.FNameLabelSpace;
   if Writer.Count = 0 then
     Exit;
    if IsXAxis then
@@ -6235,7 +6269,7 @@ end;
 
 function TNameAxis.GetLabelCenterPos(ALabel: string; X, Y: integer): TPoint;
 begin
-  Result := Writer.ComputeTextPos(X, Y, ALabel, Self);///
+  Result := Writer.ComputeTextPos(X, Y, ALabel, Self);
 end;
 
 function TNameAxis.PosFromDate(ADate: TDateTime): integer;
@@ -6263,6 +6297,8 @@ begin
   if Leap and (y2 > Y) then
     inc(NumDays);
   Indx := DaysBetween(Dt1, ADate);
+  if NumDays = 0 then
+    NumDays := 1;
   R := Writer.FPosRect;
   if IsXAxis then
   begin
@@ -6289,6 +6325,8 @@ begin
   else if ADate < Dt1 then
     ADate := Dt1;
   NumHours := HoursBetween(Dt2, Dt1);
+  if NumHours = 0 then
+    NumHours := 1;
   Indx := HoursBetween(Dt1, ADate);
   R := Writer.FPosRect;
   if IsXAxis then
@@ -6315,6 +6353,8 @@ begin
   else if ADate < Dt1 then
     ADate := Dt1;
   NumMinutes := MinutesBetween(Dt2, Dt1);
+  if NumMinutes = 0 then
+    NumMinutes := 1;
   Indx := MinutesBetween(Dt1, ADate);
   R := Writer.FPosRect;
   if IsXAxis then
@@ -6340,6 +6380,8 @@ begin
   else if ADate < Dt1 then
     ADate := Dt1;
   NumSecs := SecondsBetween(Dt2, Dt1);
+  if NumSecs = 0 then
+    NumSecs := 1;
   Indx := SecondsBetween(Dt1, ADate);
   R := Writer.FPosRect;
   if IsXAxis then
@@ -6366,6 +6408,8 @@ begin
   else if ANumber < N1 then
     ANumber := N1;
   Span := N2 - N1;
+  if Span = 0 then
+    Span := 1;
   Indx := ANumber - N1;
   R := Writer.FPosRect;
   if IsXAxis then
@@ -7244,6 +7288,7 @@ begin
   FZoomStart := -1;
   FZoomEnd := -1;
   FZoomLog := TZoomLog.Create;
+  ChartLoadList.Add(Self);
 end;
 
 destructor TCWChart.Destroy;
@@ -7449,9 +7494,13 @@ begin
     Result := ntGeneral;
 end;
 
-function TCWChart.GetFileName : TFileName;
+function TCWChart.GetFileName : string;
 begin
-  Result := FFileName;
+  Result := '';
+  if DataFileName <> '' then
+    Result := DataFileName
+  else if FCWRFileName <> '' then
+    Result := FCWRFileName;
 end;
 
 function TCWChart.GetDataset : TDataset;
@@ -8022,31 +8071,31 @@ begin
   end;
 end;
 
-procedure TCWChart.SetFileName(const Value: TFileName);
+procedure TCWChart.SetDataFileName(const Value: TFileName);
 var
   V : TFileName;
 begin
   V := Trim(Value);
-  if SameText(V, FFileName) then
+  if SameText(V, FDataFileName) then
     Exit;
-  FFileName := V;
-  if FFileName <> '' then
+  FDataFileName := V;
+  if FDataFileName <> '' then
     FDataset := nil;
   if (csDesigning in ComponentState) and IsActive and Writer.LiveGraphs
   and not (csLoading in ComponentState) then
   begin
-    if (FFileName = '') then
+    if (FDataFileName = '') then
     begin
       Writer.RenderDesigner;
       ClearCache;
       SaveCache;
       Exit;
     end;
-    if not FileExists(FileName) then
-      ShowGWError(-1,'File ' + FileName + ' not found');
-    if Writer.GetFileType(FileName) <> 1 then
+    if not FileExists(DataFileName) then
+      ShowGWError(-1,'File ' + DataFileName + ' not found');
+    if Writer.GetFileType(DataFileName) <> 1 then
       ShowGWError(msg_RichDesign);
-    Writer.LoadFromFile(FileName);
+    Writer.LoadFromFile(DataFileName);
   end;
 end;
 
@@ -8056,7 +8105,7 @@ begin
     Exit;
   FDataset := Value;
   if Value <> nil then
-    FFilename := '';
+    FDataFilename := '';
   if (csDesigning in ComponentState) and IsActive and Writer.LiveGraphs then
   begin
     if (FNameDBField <> '') and (FValueDBFields <> '') and (FDataSet <> nil) then
@@ -8198,36 +8247,6 @@ begin
    Result := (SeriesDefs.Count > 0) and (SeriesDefs[0].FDataCache.Count > 0);
 end;
 
-function TCWChart.CanAnimate : integer;
-begin
-  Result := AN_OK;
-  if csDesigning in ComponentState then
-    Result := -1
-  else if not IsActive then
-    Result := AN_NoActiveGraph
-  else if AllEqual = nil then
-    Result := AN_DifferentGraphs
-  else if Writer.InState(stLimbo) then
-    Result := AN_NoSpace
-  else if VisibleCount = 0 then
-    Result := AN_NoActiveGraph
-  else if
-   ((Writer.ActiveGraph is TCWBar) and (TCWBar(Writer.ActiveGraph).Animations = []))
-   or ((Writer.ActiveGraph is TCWPie) and not TCWPie(Writer.ActiveGraph).Animation)
-   or ((Writer.ActiveGraph is TCWCurve) and not TCWCurve(Writer.ActiveGraph).Animation) then
-     Result := AN_AnimationNotDefined;
-end;
-
-function TCWChart.PerformAnimation : integer;
-begin
-  Result := CanAnimate;
-  if Result <> AN_OK then
-    Exit;
-  FAnimationEnabled := True;
-  FHasAnimated := false;
-  Writer.RefreshChart;
-end;
-
 procedure TCWChart.Reload;
 var
   MSG : TMessage;
@@ -8238,6 +8257,32 @@ begin
   Writer.WMLoadFile(Msg);
 end;
 
+{TCWAnimation ----------------------------------------------------------}
+
+function TCWAnimationDef.GetActive;
+begin
+  Result := ProgressTypes <> [];
+end;
+
+procedure TCWAnimationDef.SetDuration(const Value : integer);
+begin
+  if (Value < 100) or (Value > 20000) then
+    ShowGWError(msg_AnimDuration);
+  FDuration := Value;
+end;
+
+procedure TCWAnimationDef.SetProgressTypes(const Value : TProgressTypes);
+begin
+  if not (FGraph is TCWBar) and (anGrow in Value) then
+  begin
+    ShowGWError(msg_AnimAnimations);
+  end;
+  FProgressTypes := Value;
+  if FGraph.Writer <> nil then
+    FGraph.Writer.FHasAnimated := True;
+    {Prevent incidential inits when calling RefreshChart}
+end;
+
 { TCWGraph ------------------------------------------------------------- }
 
 constructor TCWGraph.Create(AOwner: TComponent);
@@ -8245,21 +8290,26 @@ begin
   inherited Create(AOwner);
   FFont := TFont.Create;
   FFont.OnChange := FontChange;
-  FAnimationSpeed := asMediumFast;
+  FAnimFrameSize := 1;
+  FAnimationDef := TCWAnimationDef.Create;
+  FAnimationDef.FGraph := self;
+  FAnimationDef.FDuration := 3000;
+  FAnimationDef.FImmediate := True;
   FreeNotification(AOwner);
 end;
 
 destructor TCWGraph.Destroy;
 begin
-  inherited;
   FFont.Free;
+  FAnimationDef.Free;
+  inherited;
 end;
 
 function TCWGraph.GetCanvas: TCanvas;
 begin
   if Writer <> nil then
   begin
-    if Writer.InState(StAnimating) then
+    if Writer.InState(StAnimating) and not Writer.InState(StInitAnimation)then
       Result := Writer.FAnimBM.Canvas
     else
       Result := Writer.Canvas
@@ -8270,7 +8320,7 @@ end;
 
 procedure TCWGraph.Draw;
 begin
-  if not(ClassType = TCWCurve) and not Writer.InState(StAnimating) then
+  if not(ClassType = TCWCurve) then
   begin
     FGDIP := TGPGraphics.Create(Canvas.Handle);
     FGDIP.SetSmoothingMode(SmoothingModeAntiAlias);
@@ -8341,6 +8391,11 @@ begin
   //
 end;
 
+procedure TCWGraph.SetAnimFrameCount;
+begin
+  FAnimFrameCount := 0;
+end;
+
 function TCWGraph.GetActiveColor : TColor;
 begin
    Result := clBlack;
@@ -8354,150 +8409,17 @@ begin
     InternalActiveColor[FPaintSeriesIndex, FPaintItemIndex] := Value;
 end;
 
-procedure TCWGraph.SetAnimation(const Value : Boolean);
-begin
-  FAnimation := Value;
-end;
-
-procedure TCWGraph.SetDelay(Counter : integer);
-var
-  Boost: integer;
-  LS: TSeries;
-  Delay: integer;
-  Freq: integer;
-  AP : LongWord;
-  function GetSpeed: integer;
-  begin
-    Result := 0;
-    case AnimationSpeed of
-      asFast:
-        Result := Writer.AnimationTuner.FastFreq;
-      asMediumFast:
-        Result := Writer.AnimationTuner.MediumFastFreq;
-      asMediumSlow:
-        Result := Writer.AnimationTuner.MediumSlowFreq;
-      asSlow:
-        Result := Writer.AnimationTuner.SlowFreq;
-    end;
-  end;
-
-  procedure RecreateGraphics;
-  begin
-   FGDIP.Free;
-   FGDIP := TGPGraphics.Create(Canvas.Handle);
-   FGDIP.SetSmoothingMode(SmoothingModeAntiAlias);
-   FGDIP.SetInterpolationMode(InterpolationMode.InterpolationModeHighQuality);
-   FGDIP.SetCompositingQuality(CompositingQuality.CompositingQualityHighQuality);
-  end;
-
-begin
-  Delay := Writer.AnimationTuner.Delay;
-  LS := Writer.FLongestSeries;
-  if ClassType = TCWCurve then
-    TCWCurve(Self).Animations := [anFlow];
-
-  if ClassType = TCWBar then
-    Boost := TCWBar(Self).AnimationBooster
-  else
-    Boost := 0;
-
-  if Boost < 0 then
-    Delay := Delay + Abs(Boost * 10);
-  Freq := GetSpeed;
-
-  begin
-    if (ClassType = TCWPie)
-    or ((Self is TCWAxisGraph) and (anGrow in TCWAxisGraph(Self).Animations)) then
-    begin
-      if Freq > 0 then
-        if Counter mod Freq = 0 then
-          Sleep(Delay);
-    end
-    else
-    begin
-      if Boost = 0 then
-      begin
-        if Freq > 0 then
-        begin
-          if Counter mod Freq = 0 then
-            Sleep(Delay);
-        end
-        else
-          Sleep(0);
-      end
-      else
-      begin
-        if Boost > 0 then
-        begin
-          if Freq = 0 then
-            Sleep(0)
-          else if Counter mod (Freq + Boost) = 0 then
-            Sleep(Delay);
-        end
-        else
-          Sleep(Delay);
-      end;
-    end;
-    if ClassType = TCWBar then
-    begin
-      if (TCWBar(Self).AnimationPause <> 0) and Writer.FAnimInfo.Paused and
-        (TCWBar(Self).Layout = blSideBySide) and
-        (Writer.FAnimInfo.NextHorz < Writer.Count * LS.Count) then
-      with Self as TCWBar do
-      begin
-       if AnimationPause > 0 then
-       begin
-         AP := LongWord(AnimationPause);
-         Sleep(AP);
-         Writer.FAnimInfo.Paused := false;
-       end
-       else
-       begin
-        Writer.SetState(stAnimationPause);
-        Writer.SaveSelBM;
-        while Writer.InState(stAnimationPause) do
-        begin
-          Application.ProcessMessages; {Manual resume. No black screen here!?}
-        end;
-        RecreateGraphics; {Necessary, as the canvas handle has changed}
-       end;
-      end;
-    end
-    else if Writer.FAnimInfo.Paused then
-    //with ActiveGraph do
-    begin
-       if AnimationPause > 0 then
-       begin
-         AP := LongWord(AnimationPause);
-         Sleep(AP);
-         Writer.FAnimInfo.Paused := false;
-       end
-       else
-       begin
-        Writer.SetState(stAnimationPause);
-        Writer.SaveSelBM;
-        while Writer.InState(stAnimationPause) do
-        begin
-          Application.ProcessMessages;
-        end;
-        Writer.FAnimInfo.Paused := false;
-       end;
-    end;
-  end;
-
-  {ClearState(stAnimationPause);
-  ClearState(stResumeAnimation);
-  Chart.FHasAnimated := True;
-  Repaint;}
-end;
-
-
 function TCWGraph.GetWriter : TChartWriter;
 begin
     if FWriter <> nil then
      Result := GetWriterFromWList(FWID)
     else
       Result := FWriter;
+end;
+
+function TCWGraph.GetValueAxis(Index: Integer) : TValueAxis;
+begin
+   Result := Writer.Chart.SeriesDefs[Index].ActualAxis;
 end;
 
 function TCWGraph.GetChart : TCWChart;
@@ -8574,6 +8496,22 @@ begin
     ShowGWError(msg_GraphNotInChart);
 end;
 
+function TCWAxisGraph.GetCompressPercentage : single;
+var
+  Cnt : integer;
+begin
+  Result := 0;
+  if Writer = nil then
+    Exit;
+  if Writer.Chart.NameScale.OverflowAction <> ovCompression then
+    Exit;
+  Cnt := Writer.AbsoluteItemCount;
+  if Cnt > Writer.GraphPrintRect.Width  then
+    begin
+       Result := 100-(Writer.GraphPrintRect.Width / Cnt * 100);
+    end
+end;
+
 function TCWAxisGraph.GetValueScale : TCWValueScale;
 var
   Ser : integer;
@@ -8587,18 +8525,6 @@ begin
      else
        Result := Writer.Chart.ValueScale2;
   end;
-end;
-
-procedure TCWAxisGraph.SetAnimations(const Value: TAnimations);
-begin
-  FAnimations := Value;
-end;
-
-procedure TCWAxisGraph.SetAnimationBooster(const Value: integer);
-begin
-  if (Value < -5) or (Value > 5) then
-    Exit;
-  FAnimationBooster := Value;
 end;
 
 procedure TCWAxisGraph.SetMaxPointSpacing(const Value: integer);
@@ -8687,8 +8613,7 @@ begin
   {Compute the point coordiantes}
   for I := 0 to ASeries.ItemCount-1 do
   begin
-   // if i >= Period then
-      Result.Add(ASeries.PosFromNamVal(ASeries.FSeriesItems[i].FName, Data[i]));
+     Result.Add(ASeries.PosFromNamVal(ASeries.FSeriesItems[i].FName, Data[i]));
   end;
 end;
 
@@ -8967,6 +8892,13 @@ begin
     TCWCurve(Collection.Owner).Writer.DoRepaint;
 end;
 
+procedure TCWSeriesStyle.SetBaseLineValue(const Value : single);
+begin
+  FBaseLineValue := Value;
+  if TCWCurve(Collection.Owner).Writer <> nil then
+    TCWCurve(Collection.Owner).Writer.DoRepaint;
+end;
+
 procedure TCWSeriesStyle.SetLineWidth(const Value: integer);
 begin
   if Value < 1 then
@@ -9041,7 +8973,7 @@ begin
 end;
 
 procedure TCWSeriesStyles.ApplyOnAll(AStyle : TCurveStyle; ALineStyle : TCurveLineStyle;
- ALineWidth : integer);
+ ALineWidth : integer; ABaselineValue : single);
 begin
     Clear;
     with Owner as TCWCurve do
@@ -9049,6 +8981,7 @@ begin
         FStyle := AStyle;
         FLineStyle := ALineStyle;
         FLineWidth := ALineWidth;
+        FBaselineValue := ABaselineValue;
         if InChart then
           Writer.DoRepaint;
     end;
@@ -9439,6 +9372,32 @@ begin
     Result := FStyle;
 end;
 
+function TCWCurve.GetActiveBaselineValue(ASeries : TSeries): single;
+var
+  Indx: integer;
+begin
+  Indx := GetStyleIndex(ASeries);
+  if Indx <> -1 then
+    Result := SeriesStyles.Items[Indx].FBaselineValue
+  else
+    Result := FBaselineValue;
+end;
+
+procedure TCWCurve.SetActiveBaselineValue(ASeries: TSeries; Value: single);
+var
+  Indx: integer;
+begin
+  if Value = ActiveBaselineValue[ASeries] then
+    Exit;
+  Indx := GetStyleIndex(ASeries);
+  if Indx <> -1 then
+    SeriesStyles.Items[Indx].FBaselineValue := Value
+  else
+    FBaselineValue := Value;
+  if Writer <> nil then
+    Writer.DoRepaint;
+end;
+
 function TCWCurve.GetActiveLineStyle(ASeries : TSeries): TCurvelineStyle;
 var
   Indx: integer;
@@ -9673,6 +9632,18 @@ begin
     Result := FMaxPointSpacing;
 end;
 
+procedure TCWCurve.SetAnimFrameCount;
+begin
+  inherited;
+  if Writer <> nil then
+  begin
+    if AnimationDef.SplitDuration then
+      FAnimFrameCount := Writer.NameCount
+    else
+      FAnimFrameCount := Writer.NameCount * Writer.VisibleCount;
+  end;
+end;
+
 procedure TCWCurve.DrawBezierBaselineArea(ASource : TSeries; Pts : TPointDynArray);
 {Called from DrawArea. Pts is actually the baseline plygon}
 var
@@ -9690,9 +9661,9 @@ var
    var
      BV : single;
    begin
-        BV := BaseLineValue;
+        BV := ActiveBaseLineValue[ASource];
         begin
-          if (BV < Writer.ActiveValueScale.ValueLow) or (BV > Writer.ActiveValueScale.ValueHigh) then
+          if (BV < GetValueAxis(Asource.Index).LowVal) or (BV > GetValueAxis(Asource.Index).HighVal) then
             BV := MaxInt;
         end;
         if BV <> MaxInt then
@@ -9890,7 +9861,9 @@ begin
     else
     begin
       if SmoothLines then
-       GDIP.DrawLine(FGPen,x1, y1, x2, y2 )
+      begin
+       GDIP.DrawLine(FGPen,x1, y1, x2, y2 );
+      end
       else
         DrawGDI;
     end;
@@ -9931,6 +9904,7 @@ var
     Points: TPointArray;
     IsHandled: Boolean;
     GrRect : TRect;
+    LineCounter : integer;
 
     procedure SetOrigProps;
     begin
@@ -9979,7 +9953,6 @@ var
       Cnt: integer;
       BaseLine: integer;
       BV: single;
-
       GPts: TPointDynArray;
       GBrush: TGPBrush;
       PenClr : TGPColor;
@@ -9994,9 +9967,9 @@ var
       LastPt := P;
       if Cs = csBaseLineArea then
       begin
-        BV := BaseLineValue;
+        BV := ActiveBaseLineValue[ASource];
         begin
-          if (BV < Writer.ActiveValueScale.ValueLow) or (BV > Writer.ActiveValueScale.ValueHigh) then
+          if (BV < ASource.FMin) or (BV > ASource.FMax) then
             BV := MaxInt;
         end;
         if BV <> MaxInt then
@@ -10073,7 +10046,10 @@ var
 
         FGPen.SetColor(PenClr);
         if AreaOutline then
+        begin
+         FGPen.SetWidth(ActiveLineWidth[ASource]);
          FGDIP.DrawPolygon(FGPen, PGPPoint(@GPts[0]), Length(GPts));
+        end;
         finally
          GBrush.Free;
         end;
@@ -10205,7 +10181,9 @@ var
   begin
     GrRect := Writer.GraphRect;
     FPaintSeriesIndex := ASource.Index;
+
     RestoreOrigProps;
+
     if Anim and not(ActiveStyle[ASource] = csLine) and
       not(ActiveStyle[ASource] = csPoints) then
       Cs := csLine
@@ -10216,7 +10194,8 @@ var
     else
       Stp := LineShape = lsStep;
     if (Cs = csBaseLineArea) and
-      ((BaseLineValue < Writer.ActiveValueScale.ValueLow) or (BaseLineValue > Writer.ActiveValueScale.ValueHigh)) then
+      ((ActiveBaseLineValue[ASource] < Asource.FMin)
+       or (ActiveBaseLineValue[ASource] > ASource.FMax)) then
       Cs := csClientArea;
 
     if (cs = csNeighborArea) and ((Writer.VisibleCount < 2) or (Writer.Chart.GraphCount(Self) < 2)) then
@@ -10228,6 +10207,13 @@ var
       Points := ASource.FPoints;
     if (ASource.ItemCount = 0) or (Points.Count = 0) then
       Exit;
+
+    if (ASource.ItemCount = 1) then
+    begin
+      FPointMarkers := pmDot;
+      DrawThePoints(0);
+      Exit;
+    end;
 
     if StatLinesOnly then
     begin
@@ -10278,10 +10264,12 @@ var
     end
     else
     begin
+      LineCounter := 0;
       for i := ASource.FirstItem + 1 to ASource.LastItem do
       begin
         if Writer.InState(stAnimating) and (i < Writer.FAnimInfo.NextHorz) then
           Continue;
+        Inc(LineCounter);
         P := Points[i - ASource.FirstItem];
         if ASource.FSeriesItems[i].FLeapDummy then
         begin
@@ -10295,7 +10283,9 @@ var
           RestoreOrigProps;
         end
         else if not(Cs in [csPoints]) then
+        begin
           DrawTheLine(ASource, i, LastPt.X, LastPt.Y, P.X, P.Y);
+        end;
         LastPt := P;
         DrawThePoints(i - 1);
         if Anim then
@@ -10303,15 +10293,20 @@ var
           inc(Writer.FAnimInfo.NextHorz);
           Writer.FAnimInfo.LastPt := P;
           if i = ASource.LastItem then
+          begin
             SeriesFinished := True;
-          Break;
+            Writer.FAnimInfo.SeriesFinished := True;
+          end;
+          if (LineCounter = FAnimFrameSize) or (SeriesFinished) then
+           Break;
         end;
       end;
     end;
 
     if DrawBaseline then
     begin
-        BrkLine := Writer.PosFromValue(BaseLineValue, Chart.SeriesDefs[ASource.Index].ActualAxis);
+        BrkLine := Writer.PosFromValue(ActiveBaseLineValue[Asource],
+         Chart.SeriesDefs[ASource.Index].ActualAxis);
         Canvas.Pen.Color := clBlack;
         if Writer.FNameAxis.IsXAxis then
         begin
@@ -10364,7 +10359,7 @@ var
         Writer.FAnimInfo.NextSeries := GetNextVisible(Index);
         if Writer.FAnimInfo.NextSeries = -1 then
           Writer.ClearState(stAnimating)
-        else if AnimationPause <> 0 then
+        else if AnimationDef.Pause <> 0 then
           Writer.FAnimInfo.Paused := True;
         Stop := True;
       end;
@@ -10376,6 +10371,7 @@ begin
   inherited;
   Anim := False;
   SeriesFinished := False;
+  Writer.FAnimInfo.SeriesFinished := false;
   loop := 0;
   LoopCnt := Writer.Count - 1;
   if Writer.InState(stAnimating) then
@@ -10389,13 +10385,12 @@ begin
   OrigProps.NeedsRestore := False;
   if (Writer <> nil)then
   begin
-    if SmoothLines and not Anim then
+    if SmoothLines then
     begin
       FGDIP := TGPGraphics.Create(Canvas.Handle);
       FGDIP.SetSmoothingMode(SmoothingModeAntiAlias);
       FGDIP.SetInterpolationMode(InterpolationMode.InterpolationModeHighQuality);
       FGDIP.SetCompositingQuality(CompositingQuality.CompositingQualityHighQuality);
-//      FGPEN := TGPPen.Create(0);
     end;
 
     FFirstBaseLine := True;
@@ -10409,8 +10404,13 @@ begin
        FFirstBaseline := false;
        for i := LoopCnt downto Loop do
        begin
-        if ActiveStyle[Writer.Series[i]] = csBaselineArea then
-          PerformDraw(I, False, Stop); {Mirror the baseline}
+
+       if ActiveStyle[Writer.Series[i]] = csBaselineArea then
+        begin
+          if (ActiveBaselineValue[Writer.Series[i]] >= Writer.Series[i].FMin)
+           and (ActiveBaselineValue[Writer.Series[i]] <= Writer.Series[i].FMax) then
+            PerformDraw(I, False, Stop); {Mirror the baseline}
+        end;
        end;
        if not Anim then
         DoDrawNeighbors;
@@ -10433,11 +10433,10 @@ begin
          end;
        end;
     finally
-      if SmoothLines and not Anim then
+      if SmoothLines then
       begin
        FGDIP.ReleaseHDC(Canvas.Handle);
        FGDIP.Free;
-  //     FGPEN.Free;
       end;
     end;
   end;
@@ -10609,7 +10608,6 @@ begin
   FOrigBarWidth := FBarWidth;
   FItemSpacing := 3;
   FScrollingBarWidth := 20;
-  FAnimationBooster := 0;
   FLayout := blSideBySide;
   FTextContents := [tcValue];
   FCubeAngle := 45;
@@ -11154,6 +11152,60 @@ begin
   end;
 end;
 
+procedure TCWBar.SetAnimFrameCount;
+var
+  i : integer;
+  R : TRect;
+begin
+  inherited;
+  if Writer = nil then
+    Exit;
+  FAnimFrameCount := 0;
+  if anGrow in AnimationDef.ProgressTypes then
+  begin
+    FAnimMeasuring := True;
+    Writer.ClearState(stAnimating);
+    try
+      Draw;
+      for i := 0 to Writer.FTrackBars.Count - 1 do
+      begin
+        begin
+          R := Writer.FTrackBars[i].BarRect;
+          if Writer.FNameAxis.IsXAxis then
+          begin
+            if anFlow in AnimationDef.ProgressTypes then
+            begin
+              if not AnimationDef.SplitDuration then
+                FAnimFrameCount := FAnimFrameCount + R.Height
+              else if R.Height > FAnimFrameCount then
+                FAnimFrameCount := R.Height;
+            end
+            else if R.Height > FAnimFrameCount then
+                FAnimFrameCount := R.Height;
+          end
+          else
+          begin
+            if anFlow in AnimationDef.ProgressTypes then
+            begin
+              if not AnimationDef.SplitDuration then
+                FAnimFrameCount := FAnimFrameCount + R.Width
+              else if R.Width > FAnimFrameCount then
+                FAnimFrameCount := R.Width;
+            end
+            else if R.Width > FAnimFrameCount then
+                FAnimFrameCount := R.Width;
+          end;
+        end;
+      end;
+    finally
+      FAnimMeasuring := false;
+      Writer.SetState(stAnimating);
+    end;
+  end
+  else
+    FAnimFrameCount := Writer.NameCount * Writer.VisibleCount;
+end;
+
 function TCWBar.GetSeriesSpacing: integer;
 begin
   Result := FSeriesSpacing;
@@ -11161,8 +11213,7 @@ end;
 
 function TCWBar.Compressing: Boolean;
 begin
-  Result := InChart and (Writer.Chart.NameScale.OverflowAction = ovCompression)
-  and (Writer.VisibleCount = 1);
+  Result := InChart and (Writer.Chart.NameScale.OverflowAction = ovCompression);
 end;
 
 function TCWBar.GetCylinderHatHeight : integer;
@@ -11188,7 +11239,7 @@ var
   Pt: TBarPosit;
   BrkLine: integer;
   R: TRect;
-  VertChanged, VertFinished: Boolean;
+  VertChanged, VertFinished, AnimOverflow: Boolean;
   WInt: integer;
   Wdth, WdthX: integer;
   MinTextSpace : integer;
@@ -11201,14 +11252,13 @@ var
   LastColor: TColor;
   UsebaseLine: Boolean;
   SelColor: TColor;
-  //GPen: TGPPen;
-  //GBrush: TGPSolidBrush;
   VertAnim, HorzAnim: Boolean;
   LastRect: TRect;
   ExcludeEvent: Boolean;
   CanDrawText : Boolean;
   IsFirst : Boolean;
-
+  HorzFrameCnt : integer;
+  W : integer;
 
   function GRect: TRect;
   begin
@@ -11230,16 +11280,14 @@ var
     B := GetBValue(Clr);
     if (Which = 0) or (Which = 1) then
     begin
-      //GBrush := TGPSolidBrush.Create(MakeColor(255, R, G, B));
       FGBrush.SetColor(MakeColor(255, R, G, B));
     end;
     if (Which = 0) or (Which = 2) then
     begin
-      //GPen := TGPPen.Create(MakeColor(255, R, G, B), 0);
       FGPen.SetColor(MakeColor(255, R, G, B));
     end;
   end;
-///
+
   function DoTrack(BrkLine: integer; OutPutIndex: integer; ARect: TRect;
     SerIndx, SerItmIndx: integer): TTrackBar;
   var
@@ -11296,6 +11344,7 @@ var
       end;
     end;
 
+    Tb.BarRect := ARect;
     Tb.VisibleRect := ARect;
     Tb.SeriesIndex := SerIndx;
     Tb.SeriesItmIndex := SerItmIndx;
@@ -11314,6 +11363,7 @@ var
     TLeft, TRight, BLeft, BRight : TPoint;
     OlapRect : TRect;
     HasImages : Boolean;
+    Clr : TColor;
   const
     Marg = 3;
 
@@ -11364,11 +11414,12 @@ var
     HasImages := (Writer.FImageSize.cx > 0) and (boBarImages in Options);
     if not(boText in Options) and not HasImages then
       Exit;
+    Clr := Canvas.Brush.Color;
     sl := TStringList.Create;
     sl.DefaultEncoding := TEncoding.Utf8;
     try
-    if Writer.InState(stAnimating) and not(Animations = [anFlow]) and
-      not ((AnimationPause <> 0) and (Animations = [anFlow])) then
+    if Writer.InState(stAnimating) and not(AnimationDef.ProgressTypes = [anFlow]) and
+      not ((AnimationDef.Pause <> 0) and (AnimationDef.ProgressTypes = [anFlow])) then
     begin
       if not Writer.InState(stAnimationPause) and not VertFinished then
       begin
@@ -11515,6 +11566,7 @@ var
       end;
     end;
     finally
+      Canvas.Brush.Color := Clr;
       sl.Free;
     end;
   end;
@@ -11527,7 +11579,8 @@ var
     Dir: TGradientDirection;
     GradBrush: TGPLinearGradientBrush;
   begin
-
+    if FAnimMeasuring then
+      Exit;
     if BarStyle = bsGradientLength then
       EndClr := ChangeColor(Color, d3_GradientStyle)
     else
@@ -11555,7 +11608,6 @@ var
             MakePoint(R.Left, R.Bottom));
           GDIP.DrawLine(FGPen, MakePoint(R.Right, R.Top),
             MakePoint(R.Right, R.Bottom));
-          //GPen.Free;
         end;
         GradBrush.Free;
         Exit;
@@ -11617,7 +11669,6 @@ var
         GDIP.DrawEllipse(FGPen, MakeRect(R))
       else
         GDIP.DrawArc(FGPen, MakeRect(R), 0, 180);
-      //GPen.Free;
     end;
 
     procedure DrawFirstTop(Colr: TColor; Rct: TRect);
@@ -11630,8 +11681,6 @@ var
       Inc(Rct.Left);
       GDIP.FillEllipse(FGBrush, MakeRect(Rct));
       GDIP.DrawEllipse(FGPen, MakeRect(Rct));
-      //GBrush.Free;
-      //GPen.Free;
       if (boOutLines in Options) or ItmClrsMultiseries then
       begin
         DrawOutLine(Colr, True);
@@ -11639,6 +11688,8 @@ var
     end;
 
   begin
+    if FAnimMeasuring then
+      Exit;
     D3Inc := 0;
     if Writer.HasWall then
     begin
@@ -11659,7 +11710,6 @@ var
 
     GDIP.FillPie(GradBrush, MakeRect(R), 0, 180);
     GradBrush.Free;
-    //GPen.Free;
 
     if (boOutLines in Options) or ItmClrsMultiseries then
     begin
@@ -11715,6 +11765,8 @@ var
     H: integer;
     D3Inc: integer;
   begin
+    if FAnimMeasuring then
+      Exit;
     if Writer.HasWall then
     begin
       Get3DDims(ABarRect, TopL, TopR, BotL, BotR);
@@ -11729,7 +11781,7 @@ var
     Clr := ChangeColor(Color, d3_TopCube);
     if Layout = blStacked then
     begin
-      if Animations = [anGrow] then
+      if AnimationDef.ProgressTypes = [anGrow] then
         PrintTop := FirstBar or
           (not VertFinished and Writer.InState(stAnimating))
       else
@@ -11740,55 +11792,41 @@ var
     if PrintTop then
     begin
       SetTheColor(Clr);
-      try
-        GPts[0] := MakePoint(ABarRect.Left, ABarRect.Top);
-        GPts[1] := MakePoint(TopL.X, TopL.Y);
-        GPts[2] := MakePoint(TopR.X, TopR.Y);
-        GPts[3] := MakePoint(ABarRect.Right, ABarRect.Top);
-        GDIP.FillPolygon(FGBrush, PGPPoint(@GPts[0]), 4);
-        GDIP.DrawPolygon(FGPen, PGPPoint(@GPts[0]), 4);
-      finally
-        //GPen.Free;
-        //GBrush.Free;
-      end;
+      GPts[0] := MakePoint(ABarRect.Left, ABarRect.Top);
+      GPts[1] := MakePoint(TopL.X, TopL.Y);
+      GPts[2] := MakePoint(TopR.X, TopR.Y);
+      GPts[3] := MakePoint(ABarRect.Right, ABarRect.Top);
+      GDIP.FillPolygon(FGBrush, PGPPoint(@GPts[0]), 4);
+      GDIP.DrawPolygon(FGPen, PGPPoint(@GPts[0]), 4);
     end;
 
     Clr := ChangeColor(Color, d3_SideCube);
     SetTheColor(Clr);
-    try
-      GPts[0] := MakePoint(ABarRect.Right - 1, ABarRect.Top);
-      GPts[1] := MakePoint(TopR.X, TopR.Y);
-      GPts[2] := MakePoint(BotR.X, BotR.Y);
-      GPts[3] := MakePoint(BotL.X - 1, BotL.Y - 1);
-      GDIP.FillPolygon(FGBrush, PGPPoint(@GPts[0]), 4);
-      GDIP.DrawPolygon(FGPen, PGPPoint(@GPts[0]), 4);
-    finally
-      //GPen.Free;
-      //GBrush.Free;
-    end;
+    GPts[0] := MakePoint(ABarRect.Right - 1, ABarRect.Top);
+    GPts[1] := MakePoint(TopR.X, TopR.Y);
+    GPts[2] := MakePoint(BotR.X, BotR.Y);
+    GPts[3] := MakePoint(BotL.X - 1, BotL.Y - 1);
+    GDIP.FillPolygon(FGBrush, PGPPoint(@GPts[0]), 4);
+    GDIP.DrawPolygon(FGPen, PGPPoint(@GPts[0]), 4);
 
     if ((boOutLines in Options) or ItmClrsMultiseries) then
     begin
       Clr := ChangeColor(Color, d3_Outline);
       SetTheColor(Clr);
-      try
-        GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Top, ABarRect.Right,
-          ABarRect.Top);
-        if FirstBar then
-        begin
-         GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Top, TopL.X, TopL.Y);
-         GDIP.DrawLine(FGPen, TopL.X, TopL.Y, TopR.X, TopR.Y);
-         GDIP.DrawLine(FGPen, TopR.X, TopR.Y, BotR.X,BotR.Y);
-        end;
-        GDIP.DrawLine(FGPen, BotR.X, BotR.Y, BotL.X, BotL.Y);
-        GDIP.DrawLine(FGPen, ABarRect.Right, ABarRect.Top, TopR.X, TopR.Y);
-        GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Bottom, ABarRect.Right, ABarRect.Bottom);
-        GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Top, ABarRect.Left, ABarRect.Bottom);
-        GDIP.DrawLine(FGPen, ABarRect.Right, ABarRect.Top, ABarRect.Right, ABarRect.Bottom);
-      finally
-        //GPen.Free;
-        //GBrush.Free;
+
+      GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Top, ABarRect.Right,
+        ABarRect.Top);
+      if FirstBar then
+      begin
+       GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Top, TopL.X, TopL.Y);
+       GDIP.DrawLine(FGPen, TopL.X, TopL.Y, TopR.X, TopR.Y);
+       GDIP.DrawLine(FGPen, TopR.X, TopR.Y, BotR.X,BotR.Y);
       end;
+      GDIP.DrawLine(FGPen, BotR.X, BotR.Y, BotL.X, BotL.Y);
+      GDIP.DrawLine(FGPen, ABarRect.Right, ABarRect.Top, TopR.X, TopR.Y);
+      GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Bottom, ABarRect.Right, ABarRect.Bottom);
+      GDIP.DrawLine(FGPen, ABarRect.Left, ABarRect.Top, ABarRect.Left, ABarRect.Bottom);
+      GDIP.DrawLine(FGPen, ABarRect.Right, ABarRect.Top, ABarRect.Right, ABarRect.Bottom);
     end;
   end;
 
@@ -11885,7 +11923,7 @@ var
         DrawCube(BarRect, Canvas.Brush.Color, True, OutPutIndex);
         DoTrack(BrkLine, 0, BarRect, SerInd, ItmNumber);
       end
-      else
+      else if not FAnimMeasuring then
         Canvas.Rectangle(BarRect);
     end;
   end;
@@ -12125,44 +12163,33 @@ begin
 
   FHorzCounter := 0;
   FVertCounter := 0;
-  VertAnim := (anGrow in Animations);
-  HorzAnim := (anFlow in Animations);
+  VertAnim := (anGrow in AnimationDef.ProgressTypes);
+  HorzAnim := (anFlow in AnimationDef.ProgressTypes);
   { VerAnim and HorzAnim use for shorts }
   Writer.FAnimInfo.Stopped := False;
-  Writer.FAnimInfo.Paused := Writer.FAnimInfo.StartPause;
-
+  Writer.FAnimInfo.Paused := Writer.FAnimInfo.StartPause and not FAnimMeasuring;
+  Writer.FAnimInfo.OverflowCount := 0;
+  HorzFrameCnt := 0;
   if Writer.FAnimInfo.Paused then
   begin
     Writer.FAnimInfo.StartPause := False;
     Exit;
   end;
 
-  ExcludeEvent := Writer.InState(stAnimating);
+  ExcludeEvent := Writer.InState(stAnimating) or FAnimMeasuring;
 
   if VertAnim and Writer.InState(stAnimating) and
     not Writer.InState(stInitAnimation) then
   begin
     { Clear GraphRect to render anti aliasing correctly }
-    if AnimationBooster >= 0 then
-     Writer.FAnimInfo.NextVert := Writer.FAnimInfo.NextVert +
-       AnimationBooster + 1
-     else
-      Writer.FAnimInfo.NextVert := Writer.FAnimInfo.NextVert + 1;
-    if not HorzAnim then
-    begin
-      LastBar := Writer.GetGraphPrintRect;
-      inc(LastBar.Left);
-      Canvas.Brush.Color := Writer.Chart.GraphBGColor;
-      Canvas.FillRect(LastBar);
-      Writer.FNameAxis.DrawSections;
-      Writer.FValueAxis.DrawSections;
-      Writer.DrawBorders;
-    end;
+    Writer.FAnimInfo.NextVert := Writer.FAnimInfo.NextVert +
+       FAnimFrameSize;
   end;
   Posits := TBarPosits.Create;
   try
     VertChanged := False;
     VertFinished := False;
+    AnimOverflow := false;
     while GetNext(BarIndx, Posits, ItmNumber) do
     begin
       FPaintItemIndex := ItmNumber;
@@ -12182,12 +12209,26 @@ begin
           begin
             if VertAnim then
             begin
-              if VertFinished then
+              if VertFinished and not AnimOverflow then
+              begin
                 Writer.FAnimInfo.NextHorz := FHorzCounter + 1;
+              end;
+              Writer.FAnimInfo.Stopped := True;
             end
             else
+            begin
               Writer.FAnimInfo.NextHorz := FHorzCounter + 1;
-            Writer.FAnimInfo.Stopped := True;
+              inc(HorzFrameCnt);
+              if FAnimFramesize > 1 then
+              begin
+               Writer.FAnimInfo.Stopped := (HorzFrameCnt = FAnimFrameSize);
+               if not Writer.FAnimInfo.Stopped  then
+                 inc(FHorzCounter);
+
+              end
+              else
+                Writer.FAnimInfo.Stopped := True;
+            end;
           end;
         end;
 
@@ -12274,13 +12315,40 @@ begin
 
         if VertAnim and Writer.InState(stAnimating) then
         begin
+          AnimOverflow := false;
+          if Writer.FNameAxis.IsXAxis then
+            W := R.Height
+          else
+            W := R.Width;
+          if FAnimFrameSize > W then
+          begin
+           {Spillover. Transfer to next bar}
+            FAnimFramesize := FAnimFrameSize - R.Height;
+            AnimOverflow := True;
+          end;
           R := GetAnimRect(R);
           if VertFinished and HorzAnim then
           begin
-            Writer.FAnimInfo.NextHorz := FHorzCounter + 1;
             Writer.FAnimInfo.NextVert := 0;
             Writer.FAnimInfo.Paused := True;
+            if AnimOverflow then
+            begin
+              inc(Writer.FAnimInfo.OverflowCount);
+              {The animator reads this and sets a delay}
+              Writer.FAnimInfo.Stopped := false;
+              {Draw the bar straight out and move to next without returning}
+              Writer.FAnimInfo.NextVert := Writer.FAnimInfo.NextVert +
+               FAnimFrameSize;
+              inc(FHorzCounter);
+              inc(Writer.FAnimInfo.NextHorz);
+            end
+            else
+             Writer.FAnimInfo.NextHorz := FHorzCounter + 1;
           end;
+          {else if VertFinished then
+           DrawBarText(R, Posits[i].SerInd, ItmNumber, i=0);
+           Intended to print the text when ver finished. Not working yet
+           and may be not ncessary.}
         end
         else if Writer.InState(stAnimating) then
           Writer.FAnimInfo.Paused := True;
@@ -12308,9 +12376,9 @@ begin
             end;
           end;
 
-          if not Handled or Writer.FAnimInfo.Stopped then
+          if not Handled then
           begin
-            if (BarStyle = bsFlat) or Compressing then
+            if ((BarStyle = bsFlat) or Compressing) and not FAnimMeasuring then
               Canvas.Rectangle(R)
             else if BarStyle = bsCylinder then
               DrawCylinder(R, Canvas.Brush.Color, i = 0, i)
@@ -12386,11 +12454,15 @@ begin
        and (WdthX + ItemSpacing >= MinTextSpace)) or (WdthX >= MinTextSpace)
     else
       CanDrawText := (WdthX + ItemSpacing >= MinTextSpace) or (WdthX >= MinTextSpace);
-    if CanDrawText then
+    if CanDrawText and not FAnimMeasuring then
     for i := 0 to Writer.FTrackBars.Count - 1 do
     begin
       if Writer.InState(stAnimating) then
-        IsFirst := (FHorzCounter mod Writer.VisibleCount = 0)
+      begin
+        if (AnimationDef.ProgressTypes = [anGrow]) then
+         Break;
+        IsFirst := (FHorzCounter mod Writer.VisibleCount = 0);
+      end
       else
         IsFirst := (i mod Writer.VisibleCount = 0);
       DrawBarText(Writer.FTrackBars[i].VisibleRect,
@@ -12400,7 +12472,7 @@ begin
     end;
   end;
 
-  if UseBrk and DrawBaseline then
+  if UseBrk and DrawBaseline and not FAnimMeasuring then
   begin
     Canvas.Pen.Color := clBlack;
     if Writer.FNameAxis.IsXAxis then
@@ -12414,6 +12486,7 @@ begin
       Canvas.LineTo(BrkLine, Writer.GetGraphPrintRect.Bottom);
     end
   end;
+  Writer.FAnimInfo.VertFinished := VertFinished;
   Writer.ResetCanvas(Self);
 end;
 
@@ -12429,7 +12502,7 @@ begin
      FOverlaps := TOverlaps.Create(Writer.GraphRect, mdLeft);
     DoDraw;
 
-    if StatLine <> slNone then
+    if (StatLine <> slNone) and not FAnimMeasuring then
     begin
        if (StatBackgroundBlending > 0)  then
          begin
@@ -12448,11 +12521,8 @@ begin
        end;
     end;
   finally
-    if not Writer.InState(stAnimating) then
-    begin
-      FGDIP.ReleaseHDC(Canvas.Handle);
-      FreeAndNil(FGDIP);
-    end;
+    FGDIP.ReleaseHDC(Canvas.Handle);
+    FreeAndNil(FGDIP);
     FOverlaps.Free;
   end;
 
@@ -12608,6 +12678,24 @@ begin
   inherited;
 end;
 
+procedure TCWPie.SetAnimFrameCount;
+begin
+  inherited;
+  if (Writer <> nil) then
+  begin
+    if AnimationDef.SplitDuration then
+    begin
+      Writer.ClearState(stAnimating);
+      FAnimMeasuring := True;
+      Draw;
+      Writer.SetState(stAnimating);
+      FAnimMeasuring := False;
+    end
+    else
+      FAnimFrameCount := Round(360/Writer.AnimationTuner.AngleIncrement) * Writer.VisibleCount;
+  end;
+end;
+
 procedure TCWPie.TitleFontChange(Sender : TObject);
 begin
    if InChart then
@@ -12757,9 +12845,11 @@ var
   MaxText : integer;
   OuterWidth, OuterHeight : integer;
   Anim : Boolean;
+  AngleInc : single;
   SeriesFinished : Boolean;
-  SliceFinished : Boolean;
+  SliceFinished, SpaceFinished : Boolean;
   IsDrawn : Boolean;
+  WidestAngle : single;
 const
   Spacing = 10;
   PinMarg = 10;
@@ -12879,7 +12969,7 @@ const
           begin
             AR := DrawRect;
             Inc(Ar.Top, ShadowSize);
-            {Lower the top with the sahdow size to synchronize the center points.
+            {Lower the top with the shadow size to synchronize the center points.
             This makes the draw rect somewhat oval}
             GDIP.DrawArc(FGPen, MakeRect(AR.Left, AR.Top,
               AR.Width, AR.Height), LastAngle, Angle);
@@ -12918,6 +13008,9 @@ const
       if ASource.FPieState <> 0 then
         Exit;
 
+      if Anim then
+        RealItmIndex := SeritIndx
+      else
       if SliceSpacing <> 0 then
         RealItmIndex := ASource.FTrackPies.Count
       else
@@ -12945,10 +13038,10 @@ const
         TP.TextAngle := Angle;
         TP.Color := InternalActiveColor[ASource.Index,SeritIndx];
         ASource.FTrackPies.Add(TP);
-        AR := DrawRect;
-        Inc(AR.Top, ShadowSize);
-        ASource.FPieRect := AR;
       end;
+      AR := DrawRect;
+      Inc(AR.Top, ShadowSize);
+      ASource.FPieRect := AR;
       Writer.Canvas.Font.Assign(Font);
     end; { End DrawPieSlice }
 
@@ -12965,6 +13058,10 @@ const
       begin
         Itm := TSeriesItem.Create;
         Itm.Assign(Items[i]);
+        if Itm.FValue - Sp < 0 then
+         Sp := 0
+        else
+         Sp := SliceSpacing;
         Itm.FValue := Itm.FValue - Sp;
         Itm.FSpace := False;
         Temp.Add(Itm);
@@ -13356,10 +13453,6 @@ const
         begin
           if not FCanDrawtext then
            Exit;
-           if Anim then
-            if not SliceFinished then
-              Exit;
-
            Canvas.Font.Assign(FSeriesTitleFont);
            Canvas.Brush.Style := bsClear;
            R := ASource.DoughnutRect;
@@ -13401,11 +13494,8 @@ const
             Pst := Serit[i].Value;
             a := Pst * 360 / 100;
             SourceAngle := a;
-
             if Anim and (i = Writer.FAnimInfo.NextItem) then
             begin
-              Writer.FAnimInfo.NextAngle := Writer.FAnimInfo.NextAngle +
-               Writer.AnimationTuner.AngleIncrement; {Accumulate angle of slice}
               a := Writer.FAnimInfo.NextAngle;
               if Writer.FAnimInfo.NextAngle >= SourceAngle then {End of slice}
               begin
@@ -13488,17 +13578,28 @@ const
         PinRect.Top := OuterRect.Top - Round(PinMarg * Ratio);
         PinRect.Right := OuterRect.Right+ PinMarg;
         PinRect.Bottom := OuterRect.Bottom + Round(PinMarg * Ratio);
+      end;
 
-        if Anim and Writer.FAnimInfo.AnimInit then
-        begin
-           if (Writer.Chart.GraphBGColor = clSilver)
-           or (Writer.Chart.GraphBGColor = clBtnFace) then
-             FGPen.SetColor(MakeGPClr(clBlack))
-           else
-             FGPen.SetColor(MakeGPClr(clSilver));
-           //GDIP.DrawEllipse(FGPen, MakeRect(OuterRect));
-           Writer.FAnimInfo.AnimInit := false;
-        end;
+      procedure SetWidestAngle;
+      var
+        i : integer;
+        Wider : Boolean;
+        Deg :single;
+      begin
+         Wider := false;
+         for I := 0 to Serit.Count-1 do
+           begin
+             if Serit[i].Value > WidestAngle then
+             begin
+               WidestAngle := Serit[i].Value;
+               Wider := True;
+             end;
+           end;
+         if Wider then
+         begin
+           Deg := WidestAngle*360/100;
+           FAnimFrameCount := Round(Deg/Writer.AnimationTuner.AngleIncrement);
+         end;
       end;
 
     begin { Draw Pie }
@@ -13508,12 +13609,25 @@ const
       LastAngl := StartAngle;
       AngleCnt :=  0;
       Serit := nil;
+      if Anim then
+      begin
+          AngleInc := Writer.AnimationTuner.AngleIncrement * FAnimFrameSize
+      end;
 
       Serit := TSeriesItems.Create;
       if not TCWPieChart(Writer.Chart).Percentages then
         CalcPst(ASource, ASource.FSeriesItems, Serit)
       else
         AssignItems(ASource, ASource.FSeriesItems, Serit);
+      if FAnimMeasuring then
+      begin
+       try
+        SetWidestAngle;
+       finally
+         Serit.Free;
+       end;
+       Exit;
+      end;
       SetDrawRect;
       if SliceSpacing > 0 then
       begin
@@ -13532,6 +13646,7 @@ const
           for i := 0 to Serit.Count - 1 do
           begin
             SliceFinished := false;
+            SpaceFinished := false;
             SeriesFinished := false;
             FPaintItemIndex := i;
             Pst := Serit[i].Value;
@@ -13547,22 +13662,27 @@ const
 
             if Anim and (i = Writer.FAnimInfo.NextItem) then
             begin
-              Writer.FAnimInfo.NextAngle := Writer.FAnimInfo.NextAngle +
-               Writer.AnimationTuner.AngleIncrement; {Accumulate angle of slice}
+              if (ShadowPie = 0) or (Style = psFlat)  then
+                Writer.FAnimInfo.NextAngle := Writer.FAnimInfo.NextAngle + AngleInc;
+                {Accumulate angle of slice}
+              if Writer.FAnimInfo.NextAngle > SourceAngle then
+              begin
+                Writer.FAnimInfo.NextAngle := SourceAngle;
+              end;
               a := Writer.FAnimInfo.NextAngle;
               DrawPieSlice(Serit, i, a, LastAngl, DrawRect, Center,
               Pst + SliceSpacing);
               if (Writer.FAnimInfo.NextAngle >= SourceAngle) and ((ShadowPie = 1) or (Style = psFlat)) then {End of slice}
               begin
                 SliceFinished := True;
-                ThisItem := i;
+                SpaceFinished := Serit[i].FSpace or (a = 0);
                 inc(Writer.FAnimInfo.NextItem);
                 Writer.FAnimInfo.NextAngle := 0;
                 if (Writer.FAnimInfo.NextItem > Serit.Count-1) then
                 begin
                  SeriesFinished := True;
+                 Writer.FAnimInfo.SeriesFinished := True;
                  Writer.FAnimInfo.NextItem := 0;
-                 Writer.FAnimInfo.NextAngle := 0;
                 end;
                 Break;
               end;
@@ -13573,6 +13693,7 @@ const
             if not Serit[i].FSpace then
             begin
               inc(SeritIndx);
+              inc(ThisItem);
             end;
             if Anim and (i = Writer.FAnimInfo.NextItem) then
              Break
@@ -13588,7 +13709,9 @@ const
              if Anim then
              begin
               if not SliceFinished then
-                Break;
+              begin
+                 Break;
+              end;
               if (ASource.FTrackPies[i].FSeriesItmIndex = ThisItem) then
                DrawText(i);
              end
@@ -13700,10 +13823,11 @@ const
         OuterHeight := 50;
         OuterWidth := Round(OuterHeight / F);
       end;
-
       F := Height / Width;
       Wdth := OuterWidth-(WDist*2);
       Hght := Round(Wdth * F);
+      Writer.Series[0].FPieRect := Rect(0,0, Wdth, Hght);
+      {Set preliminary, so that ShadowSize can use ut}
       TotWidth := OuterWidth * Cnt + Cnt * Spacing - Spacing;
       StartPt.X := R.Left + (R.Width - TotWidth) div 2 + WDist;
       StartPt.Y := R.CenterPoint.Y - Hght div 2 + FTitleSpace div 2 -ShadowSize;
@@ -13733,6 +13857,8 @@ const
       F := Height / Width;
       Wdth := OuterWidth-(WDist*2);
       Hght := Round(Wdth * F);
+      Writer.Series[0].FPieRect := Rect(0,0, Wdth, Hght);
+      {Set preliminary, so that ShadowSize can use ut}
       TotHeight := OuterHeight * Cnt + Cnt * (Spacing + FTitleSpace) - Spacing;
       StartPt.Y := R.Top + (R.Height - TotHeight) div 2 - ShadowSize + HDist;
       StartPt.X := R.CenterPoint.X - Wdth div 2;
@@ -13751,8 +13877,13 @@ const
     if not FCanDrawtext then
      Exit;
     if Anim then
-     if not SliceFinished then
-        Exit;
+    begin
+     if not Writer.FAnimInfo.AnimInit then
+     begin
+       Exit;
+     end;
+     Writer.FAnimInfo.AnimInit := false;
+    end;
 
     R := Writer.Series[SeriesIndex].PieTitleRect;
     S := Writer.Series[SeriesIndex].Title;
@@ -13786,7 +13917,18 @@ begin
     Exit;
   inherited Draw;
   Anim := (Writer.InState(stAnimating));
+  WidestAngle := 0;
+  if FAnimMeasuring then
+  begin
+    for i := 0 to Writer.Count - 1 do
+    begin
+     if (Series[i].Visible) and InChart(i) then
+      DoDraw(Series[i]);
+    end;
+    Exit;
+  end;
   SeriesFinished := false;
+  Writer.FAnimInfo.SeriesFinished := false;
   Canvas.Font.Assign(Font);
   if Style = psDisc then
     ShadowPie := 0
@@ -13819,9 +13961,10 @@ begin
 
         DoDraw(Series[i]);
         IsDrawn := True;
-        if (poPrintSeriesTitles in Options) and (FTitleSpace > 0) and (Writer.Series[i].Title <> '') then
+        if (poPrintSeriesTitles in Options) and (FTitleSpace > 0) and (Writer.Series[i].Title <> '')
+        then
           DrawTitle(i);
-      end;
+       end;
       if ShadowPie <> -1 then
        ShadowPie := 1;
     end;
@@ -13832,23 +13975,22 @@ begin
     begin
       Writer.FAnimInfo.AnimInit := True;
       Writer.FAnimInfo.NextSeries := GetNextVisible(Writer.FAnimInfo.NextSeries + 1);
+      Writer.FAnimInfo.SeriesFinished := True;
       if (Writer.FAnimInfo.NextSeries = -1) then
       begin
         Writer.ClearState(stAnimating);
       end;
     end;
-    if (AnimationPause <> 0) and SliceFinished and Writer.InState(stAnimating) then
+    if (AnimationDef.Pause <> 0) and SliceFinished and Writer.InState(stAnimating) then
     begin
-        Writer.FAnimInfo.Paused := True;
+         Writer.FAnimInfo.Paused := not SpaceFinished;
     end;
 
   finally
-    if not Writer.InState(stAnimating) then
-    begin
      FGDIP.ReleaseHDC(Canvas.Handle);
      FreeAndNil(FGDIP);
-    end;
   end;
+
 end;
 
 procedure TCWPie.SetInternalActiveColor(SeriesIndex, ItemIndex : integer; Value : TColor);
@@ -14029,8 +14171,6 @@ begin
       Writer.SetHighLow;
     end;
     Writer.RefreshChart;
-    if Writer.ActiveGraph is TCWPie then
-      Writer.CorrectPie;
    end;
 end;
 
@@ -14444,8 +14584,6 @@ begin
         Writer.ClearSections(stValueScale1, False);
     end;
     Writer.RefreshChart;
-    if Writer.ActiveGraph is TCWPie then
-      Writer.CorrectPie;
   end;
 end;
 
@@ -15358,7 +15496,21 @@ end;
 procedure TCWLegend.SetPointName(const Value: string);
 var
   V: string;
+
+function ToISO(Nam : string) : string;
+var
+  Dt : TDateTime;
+  F : single;
 begin
+  Result := Nam;
+  if TryStrToDateTime(Nam, Dt, Fmt) then
+    Result := DateToISO8601(Dt)
+  else if TryStrToFloat(Nam, F, Fmt) then
+    Result := StringReplace(FormatNum(F, 3), ',', '.', []);
+end;
+
+begin
+{Convert to ISO format for locale compability}
   if csLoading in ComponentState then
   begin
     FPointName := Value;
@@ -15366,7 +15518,7 @@ begin
   end;
   V := Value;
   V := Trim(Value);
-  FPointName := V;
+  FPointName := ToISO(V);
   if GetOwnerChart <> nil then
     Writer.RefreshChart;
 end;
@@ -15494,12 +15646,58 @@ var
     end;
   end;
 
+  function IndexOfISODate(AName : string) : integer;
+  var
+    i : integer;
+    S : string;
+    Dt : TDateTime;
+  begin
+    Result := -1;
+    for I := 0 to Writer.NameCount-1 do
+    begin
+      S := Writer.Names[i];
+      if not TryStrToDate(S, Dt, Fmt) then
+        Break;
+      S := DateTOISO8601(Dt);
+      if SameText(S, AName) then
+      begin
+        Result := i;
+        Break;
+      end;
+    end;
+  end;
+
+  function IndexOfISONumber(AName : string) : integer;
+  var
+    i : integer;
+    S : string;
+    F : single;
+  begin
+    Result := -1;
+    for I := 0 to Writer.NameCount-1 do
+    begin
+      S := Writer.Names[i];
+      if not TryStrToFloat(S, F, Fmt) then
+        Break;
+      S := StringReplace(FormatNum(F, 3), ',', '.', []);
+      if SameText(S, AName) then
+      begin
+        Result := i;
+        Break;
+      end;
+    end;
+  end;
+
+
   function PointMatch(SerIndx, ItmIndx: integer): Boolean;
   var
     NamOk, ValOK: Boolean;
     S: string;
+    Dt : TDateTime;
+    F : single;
   begin
     Result := True;
+    NamOk := false;
     if (Anchoring = anPointInside) and (PointLocating in [plIndexes, plEvent])
     then
     begin
@@ -15519,11 +15717,33 @@ var
       if PointName <> '' then
       begin
         if (ItmIndx = -1) and (PointName <> '') then
-          ItmIndx := Writer.IndexOfName(PointName);
+        begin
+          if Writer.IsTimeSpan then
+           ItmIndx := IndexOfISODate(PointName)
+          else if Writer.Chart.SpanType = ntNumberSpan then
+           ItmIndx := IndexOfISONumber(PointName)
+          else
+           ItmIndx := Writer.IndexOfName(PointName);
+        end;
         if ItmIndx = -1 then
           NamOk := False
         else
-          NamOk := Writer.FSeriesData[SerIndx].FSeriesItems[ItmIndx].Name = PointName;
+        begin
+          {ISO format for locale compability. See SetPointName}
+          S := Writer.FSeriesData[SerIndx].FSeriesItems[ItmIndx].Name;
+          if Writer.IsTimeSpan then
+          begin
+            if TryStrToDateTime(S, Dt, Fmt) then
+              NamOK := SameText(DateToISO8601(Dt), PointName)
+          end
+          else if Writer.Chart.SpanType = ntNumberSpan then
+          begin
+            if TryStrToFloat(S, F, Fmt) then
+              NamOK := SameText(StringReplace(FormatNum(F, 3), ',', '.', []), PointName)
+          end
+          else
+            NamOk := SameText(S, PointName);
+        end;
       end
       else
         NamOk := True;
@@ -17543,6 +17763,11 @@ begin
      FAfterBuildChart(Chart);
 end;
 
+procedure TChartWriter.WMDOANIMATION(var Msg : TMessage);
+begin
+  DoAnimation;
+end;
+
 procedure TChartWriter.WMREFRESHCHART(var Msg : TMessage);
 begin
   RefreshChart;
@@ -17555,7 +17780,7 @@ begin
 try
   if FNeedsIds then
   begin
-    CreateIds;
+    ConnectToWriter;
     Chart.InnerMargins.FWriter := FChart.Writer;
     Chart.GraphMargins.FWriter := FChart.Writer;
     FNeedsIds := false;
@@ -17563,7 +17788,7 @@ try
    if (csDesigning in ComponentState) and not LiveGraphs then
    Exit;
 
-  if (csDesigning in ComponentState) and (Chart.FileName = '')
+  if (csDesigning in ComponentState) and (Chart.DataFileName = '')
   and (Chart.Dataset = nil) then
   begin
     RenderDesigner;
@@ -17581,25 +17806,25 @@ try
      Exit;
   end;
 
-  if (Chart.FileName = '') and (Chart.Dataset = nil) then
+  if (Chart.DataFileName = '') and (Chart.Dataset = nil) then
   begin
     if Assigned(FOnLoadFile) then
     begin
        FName := '';
        FOnLoadFile(Self, FName);
-       Chart.FFileName := FName;
+       Chart.FDataFileName := FName;
     end;
   end;
 
-  if (Chart.FileName <> '')  then
+  if (Chart.DataFileName <> '')  then
   begin
     Clear;
     begin
-     if not FileExists(Chart.FileName) then
-      ShowGWError(msg_NoFile, Chart.FileName);
-     if GetFileType(Chart.FileName) <> 1 then
+     if not FileExists(Chart.DataFileName) then
+      ShowGWError(msg_NoFile, Chart.DataFileName);
+     if GetFileType(Chart.DataFileName) <> 1 then
       ShowGWError(msg_RichDesign);
-     LoadFromFile(Chart.FileName);
+     LoadFromFile(Chart.DataFileName);
      Chart.SaveCache;
     end;
   end
@@ -17616,7 +17841,7 @@ try
   end
   else if Assigned(Chart) and (FChart.FCWRFileName <> '') then
   begin
-    LoadDataFromCWRFile(FChart.FCWRFileName, True); {ReloadChart only}
+    LoadDataFromCWRFile(FChart.FCWRFileName); {ReloadChart only}
   end
   else if Assigned(Chart) and Assigned(FChart.FOnGetData) then
   begin
@@ -17671,6 +17896,8 @@ begin
 end;
 
 procedure TChartWriter.NWndProc(var Messg: TMessage);
+var
+  AnimEnabl : Boolean;
 begin
         with Messg do begin
         case Msg of
@@ -17681,8 +17908,14 @@ begin
                 end;
                 WM_ExitSizeMove:
                 begin
+                  AnimEnabl := Chart.AnimationEnabled;
+                  Chart.AnimationEnabled := false;
                   FMouseSizing := false;
-                  RefreshChart;
+                  try
+                   RefreshChart;
+                  finally
+                   Chart.AnimationEnabled := AnimEnabl;
+                  end;
                 end;
 
         end;{case}
@@ -17708,6 +17941,8 @@ begin
   FNameSections := TSections.Create;
   FValueSections := TSections.Create;
   FTrackBars := TTrackBars.Create;
+  FAnimTimer := TTimer.Create(Self);
+  FAnimTimer.Enabled := false;
   FHWBM := TBitmap.Create;
   FYears := TYears.Create;
   FMouseInfo := miBoth;
@@ -17741,7 +17976,8 @@ begin
   FAlfaBM := Vcl.Graphics.TBitmap.Create;
   FLastMouseX := MaxInt;
   FMinContraction := 1;
-  FLiveResize := True;
+  FHasAnimated := True;
+
   { Hook into form's windowproc to catch wm_Enter/ExitSizeMove}
   if Owner is TForm then
   begin
@@ -17758,7 +17994,7 @@ begin
     MediumFastFreq := 20;
     MediumSlowFreq := 5;
     SlowFreq := 1;
-    AngleIncrement := 0.2;
+    AngleIncrement := 0.5;
   end;
 
   FBall := Vcl.Graphics.TBitmap.Create;
@@ -17865,6 +18101,91 @@ begin
     Params.Style := Params.Style or ws_Border;
 end;
 
+function TChartWriter.CanAnimate : integer;
+begin
+  Result := AN_OK;
+  if csDesigning in ComponentState then
+    Result := -1
+  else if ActiveGraph = nil then
+    Result := AN_NoActiveGraph
+  else if Chart.AllEqual = nil then
+    Result := AN_DifferentGraphs
+  else if InState(stLimbo) then
+    Result := AN_NoSpace
+  else if VisibleCount = 0 then
+    Result := AN_NoActiveGraph
+  else if not ActiveGraph.AnimationDef.Active then
+    Result := AN_AnimationNotDefined
+   else if FAnimRunning or InState(stAnimating) then
+     Result := AN_AnimationActive
+   else if (ActiveGraph is TCWCurve) then
+   with ActiveGraph as TCWCurve do
+   begin
+      if LineShape = lsBezier then
+       Result := AN_Bezier
+      else if ((Style = csClientArea) or (SeriesStyles.IndexOfStyle(csClientArea)<> -1))
+       or ((Style = csBaseLineArea) or (SeriesStyles.IndexOfStyle(csBaseLineArea)<> -1))
+       or ((Style = csNeighborArea) or (SeriesStyles.IndexOfStyle(csNeighborArea)<> -1))
+      then
+       Result := AN_AreaStyle;
+   end;
+end;
+
+function TChartWriter.IsAnimating : Boolean;
+begin
+  Result := InState(stAnimating) or InState(stInitAnimation);
+end;
+
+function TChartWriter.IsAnimationSuspended : Boolean;
+begin
+  Result := InState(stAnimating) or InState(stAnimationPause);
+end;
+
+function TChartWriter.PerformAnimation : integer;
+begin
+  Result := CanAnimate;
+  if Result <> AN_OK then
+    Exit;
+  Chart.FAnimationEnabled := True;
+  FHasAnimated := false;
+  DoInitAnimation;
+  DoRepaint;
+end;
+
+procedure TChartWriter.HaltAnimation;
+var
+  M : TMsg;
+begin
+  if Chart = nil then
+    Exit;
+  if not Chart.IsActive then
+    Exit;
+  if not InState(stAnimating) and not InState(stInitAnimation) then
+    Exit;
+  DoubleBuffered := True;
+  ClearState(stAnimationPause);
+  ClearState(stAnimating);
+  ClearState(stInitAnimation);
+  FAnimTimer.Interval := 1;
+  HasAnimated := True;
+  FAnimRunning := false;
+  PeekMessage(M, Handle, WM_DOANIMATION, WM_DOANIMATION, PM_REMOVE);
+end;
+
+procedure TChartWriter.ResumeAnimation;
+begin
+  if not InState(stAnimationPause) then
+    Exit;
+  ClearState(stAnimationPause);
+  SetState(stResumeAnimation);
+  FAnimInfo.Paused := false;
+  FAnimTimer.Enabled := True;
+  if InState(stInitAnimation) then
+  begin
+    DoAnimation;
+  end;
+end;
+
 procedure TChartWriter.SetBorder(const Value: Boolean);
 begin
   if Value = FBorder then
@@ -17922,6 +18243,9 @@ begin
   FSelBM.Free;
   FAlfaBM.Free;
   FHWBM.Free;
+  FAnimTimer.Free;
+  if InState(stAnimating) then
+    FAnimBM.Free;
   if Owner is TForm then
   begin
     SetWindowLong(FFormHandle, gwl_WndProc, Longint(FOldWndHandler));
@@ -18054,50 +18378,222 @@ begin
   end;
 end;
 
-procedure TChartWriter.DoAnimation;
+procedure TChartWriter.AnimTimer(Sender: TObject);
+var
+ LS: integer;
+ Delay: single;
+ AP : LongWord;
+ ThisFrameTime : Int64;
+ FC : integer;
+ Resuming : Boolean;
+ FrameSize : single;
+ T : integer;
+ Bar : TCWBar;
 begin
-  if ActiveGraph is TCWCurve then
-    TCWCurve(ActiveGraph).Animations := [anFlow];
-
-  SetState(stInitAnimation);
-  ClearState(stAnimating);
-  Repaint; { Draw labels and lines, but not the graph, to the screen }
-  ClearState(stInitAnimation);
-  SetState(stAnimating); { Run }
-  SaveSelBM;
-  FAnimBM := Vcl.Graphics.TBitmap.Create;
-  try
-    FAnimBM.Assign(FSelBM);
-    DoubleBuffered := false;
-    with ActiveGraph do
-    begin
-     FGDIP := TGPGraphics.Create(Canvas.Handle);
-     FGDIP.SetSmoothingMode(SmoothingModeAntiAlias);
-     FGDIP.SetInterpolationMode(InterpolationMode.InterpolationModeHighQuality);
-     FGDIP.SetCompositingQuality(CompositingQuality.CompositingQualityHighQuality);
-    end;
-    Repaint; {Get it going}
-    DoubleBuffered := True;
-    with ActiveGraph do
-    begin
-      if FGDIP <> nil then
+   T := ActiveGraph.AnimationDef.Duration;
+   Resuming := false;
+   if not InState(stAnimating) then
+   begin
+     FLoading := false;
+     FAnimTimer.Enabled := false;
+     DoubleBuffered := True;
+     FAnimBM.Free;
+     ClearState(stAnimationPause);
+     ClearState(stResumeAnimation);
+     FHasAnimated := True;
+     Application.ShowHint := True;
+     FAnimRunning := false;
+     if Assigned(FOnEndAnimation) then
+        FOnEndAnimation(Self);
+     Exit;
+   end
+   else
+   begin
+     if InState(stResumeAnimation) then
+     begin
+       ClearState(StResumeAnimation);
+       Resuming := True;
+       if Assigned(FOnStartAnimation) then
+         FOnStartAnimation(Self);
+     end;
+     if (ActiveGraph.ClassType = TCWBar) and not Resuming then
+     begin
+      Bar := TCWBar(ActiveGraph);
+      if (FAnimInfo.VertFinished) and not (Bar.AnimationDef.ProgressTypes = [anGrow]) then
       begin
-        FGDIP.ReleaseHDC(Canvas.Handle);
-        FGDIP.Free;
+        FAnimCounter := 1;
+        Bar.FAnimFrameSize := 1;
       end;
-    end;
-  finally
-    FAnimBM.Free;
+
+      LS := NameCount;
+      if (Bar.AnimationDef.Pause <> 0) and FAnimInfo.Paused and
+        (Bar.Layout = blSideBySide) and
+        (FAnimInfo.NextHorz < Count * LS) then
+      with Bar do
+      begin
+       if (AnimationDef.Pause > 0) and not (Bar.AnimationDef.ProgressTypes = [anGrow]) then
+       {Grow ignores pause}
+       begin
+         AP := LongWord(AnimationDef.Pause);
+         FAnimTimer.Interval := AP;
+         FAnimInfo.Paused := false;
+         Exit;
+       end
+       else if not (Bar.AnimationDef.ProgressTypes = [anGrow]) then
+       begin
+        if Assigned(FOnSuspendAnimation) then
+          FOnSuspendAnimation(Self);
+        SetState(stAnimationPause);
+        SaveSelBM;
+        FAnimTimer.Enabled := false; {Reset by mouse click}
+        Exit;
+       end;
+      end;
+     end
+     else if FAnimInfo.Paused then
+     with ActiveGraph do
+     begin
+       if AnimationDef.Pause > 0 then
+       begin
+         AP := LongWord(AnimationDef.Pause);
+         Writer.FAnimInfo.Paused := false;
+         FAnimTimer.Interval := AP;
+         Exit;
+       end
+       else
+       begin
+        if Assigned(FOnSuspendAnimation) then
+          FOnSuspendAnimation(Self);
+        Writer.SetState(stAnimationPause);
+        Writer.SaveSelBM;
+        Writer.FAnimInfo.Paused := false;
+        FAnimTimer.Enabled := false; {Reset by mouse click}
+        Exit;
+       end;
+     end;
+     if (ActiveGraph.ClassType = TCWPie) or (ActiveGraph.ClassType = TCWCurve) then
+     begin
+      if (FAnimInfo.SeriesFinished) then
+      begin
+        FAnimCounter := 1;
+        FAnimFrameTime := 0;
+        ActiveGraph.FAnimFrameSize := 1;
+      end;
+     end;
+     FAnimInfo.Stopped := false;
   end;
+
+  FAnimStamp := True;
+  try
+    if Resuming then
+    begin
+     FStopWatch.Reset;
+     FStopWatch.StartNew;
+     Repaint;
+     if (ActiveGraph is TCWBar) and (TCWBar(ActiveGraph).AnimationDef.ProgressTypes = [anFlow]) then
+     begin
+       FAnimTimer.Enabled := false;
+       SetState(stAnimationPause);
+       Exit;
+     end;
+    end
+    else
+    begin
+     Repaint;
+    end;
+    FStopWatch.Stop;
+  finally
+   FAnimStamp := False;
+  end;
+
+  FAnimFrameTime := FAnimFrameTime + FStopWatch.ElapsedMilliseconds;
+  FC := ActiveGraph.FAnimFrameCount;
+  ThisFrameTime := FStopWatch.ElapsedMilliseconds;
+  if (FAnimTimer.Interval > 1) and (ThisFrameTime > FAnimTimer.Interval) then
+    ThisFrameTime := ThisFrameTime - FAnimTimer.Interval;
+
+  FrameSize := (ThisFrameTime * FC) / T;
+  if FrameSize < 1 then
+  begin
+    ActiveGraph.FAnimFrameSize := 1;
+    Delay := (T/ActiveGraph.FAnimFrameCount) - ThisFrameTime;
+    if Delay <= 0 then
+      FAnimTimer.Interval := 1
+    else
+    begin
+     if Round(Delay) = 0 then
+      Delay := 1;
+     FAnimTimer.Interval := Round(Delay);
+    end;
+  end
+  else
+  begin
+    if FAnimInfo.OverflowCount > 0 then
+    begin
+      Delay := FAnimInfo.OverflowCount;
+      FAnimTimer.Interval := Round(Delay);
+    end
+    else
+      FAnimTimer.Interval := 1;
+    ActiveGraph.FAnimFrameSize := Round(FrameSize);
+  end;
+
+  Inc(FAnimCounter, ActiveGraph.FAnimFrameSize);
+  FStopWatch.Reset;
+  FStopWatch := TStopWatch.StartNew;
+
 end;
 
-procedure TChartWriter.InitAnimation;
+procedure TChartWriter.DoAnimation;
+begin
+  if FLoading then
+  begin
+    {A file with an animnated graph is opened at application start up. The application
+    is not in an idle state. Calling Repaint at this stage does not trigger the Paint method.
+    The initial animation screen is not created until Paint is actually invoked. Only then can DoAnimation
+    start it's work. The FLoading flag is cleared when Paint is invoked for the first time.}
+    PostMessage(Handle, WM_DOANIMATION, 0, 0);
+    FLoading := false;
+    Exit;
+  end;
+  if ActiveGraph is TCWCurve then
+    TCWCurve(ActiveGraph).AnimationDef.ProgressTypes := [anFlow];
+  ClearState(stAnimating);
+  SetState(stInitAnimation);
+  Repaint; { Draw labels and lines, but not the graph, to the screen }
+  if not ActiveGraph.AnimationDef.Immediate and not InState(stResumeAnimation) then
+  begin
+    if Assigned(FOnSuspendAnimation) then
+      FOnSuspendAnimation(Self);
+    Exit;
+  end;
+  FAnimBM := Vcl.Graphics.TBitmap.Create;
+  ClearState(stInitAnimation);
+  ClearState(stResumeAnimation);
+  SetState(stAnimating); { Run }
+  SaveSelBM;
+  FAnimBM.Assign(FSelBM);
+  FAnimTimer.Interval := 1;
+  FAnimTimer.OnTimer := AnimTimer;
+  if Assigned(FOnStartAnimation) then
+    FOnStartAnimation(Self);
+  FAnimTimer.Enabled := True;
+  FAnimCounter := 1;
+  FAnimFrameTime := 0;
+  DoubleBuffered := false;
+  ActiveGraph.SetAnimFrameCount;
+  FStopWatch := TStopWatch.StartNew;
+  Application.ShowHint := false; {Prevent interrupstions for hin windows}
+  FAnimRunning := True;
+end;
+
+procedure TChartWriter.DoInitAnimation;
 var
   i : integer;
   Denied : Boolean;
   G : TCWGraph;
 begin
-  if Chart.HasAnimated then
+  if HasAnimated then
     Exit;
   if not Chart.AnimationEnabled then
     Exit;
@@ -18138,27 +18634,15 @@ begin
   FAnimInfo.NextItem := 0;
   FAnimInfo.NextAngle := 0;
   FAnimInfo.LastXY := 0;
+  FAnimInfo.OverflowCount := 0;
   FAnimInfo.Stopped := False;
   FAnimInfo.StartPause := (ActiveGraph is TCWBar);
+  FAnimInfo.VertFinished := false;
+  FAnimInfo.SeriesFinished := false;
   SetState(stAnimating);
-end;
-
-procedure TChartWriter.CorrectPie;
-begin
-    with (ActiveGraph as TCWPie)  do
-    begin
-    {3D pies does not diplay correctly unless this trick is done.
-    Unclear reason. Should be corrected i DrawPie.}
-   // if Animation then
-   //   Exit;
-      if Style = psDisc then
-      begin
-        FStyle := psFlat;
-        Repaint;
-        FStyle := psDisc;
-        Repaint;
-      end;
-    end;
+  SetState(stInitAnimation);
+  if not ActiveGraph.AnimationDef.Immediate then
+    SetState(stAnimationPause);
 end;
 
 procedure TChartWriter.ClearState(AState: TState);
@@ -18239,6 +18723,9 @@ begin
    Exit;
   if Chart.FOrigData.Count = 0 then
     Exit;
+  if Chart.FOrigData[0].Count < 2 then
+   Exit;
+
   Itm1 := Chart.FOrigData[0].FSeriesItems[0];
   Itm2 := Chart.FOrigData[0].FSeriesItems[1];
   if IsTimeSpan then
@@ -18392,8 +18879,13 @@ begin
   Anim := Chart.AnimationEnabled;
   Chart.AnimationEnabled := false;
   FContractionBase.Clear;
-  Execute;
-  Chart.AnimationEnabled := Anim;
+  SetState(stInternalAction);
+  try
+    Execute;
+  finally
+    Chart.AnimationEnabled := Anim;
+    ClearState(stInternalAction);
+  end;
 
 end;
 
@@ -18584,7 +19076,7 @@ begin
     Exit;
   if InState(stUpdating) or InState(stLimbo) then
     Exit;
-  Chart.FHasAnimated := false;
+  FHasAnimated := false;
   FScrolling := True;
   ClearState(stZoomed);
   APointSpacing := GetScrollPointSpacing;
@@ -19688,7 +20180,8 @@ begin
         if FSeriesData[i].Count = 1 then
         begin
           { Series must at least contain two values}
-          ShowGWError(msg_TwoValues);
+          //ShowGWError(msg_TwoValues);
+          {Allowed 22.10.23}
         end;
       end;
 
@@ -19788,7 +20281,10 @@ begin
     if Assigned(FOnDataChange) and
      (not Chart.IsCached or (Chart.NameScale.OverflowAction = ovScrolling)) then
       FOnDataChange(Self);
-    Invalidate;
+    if InState(stAnimating) and not FLoadExec then
+      Dorepaint
+    else
+      Invalidate;
   except
     raise;
   end;
@@ -19880,7 +20376,6 @@ var
           Exclusions[ExclusionCount] := TempDefs[i].SeriesItemIndex;
         end;
       except
-        Sleep(0);
         raise;
       end;
     end;
@@ -20342,19 +20837,18 @@ var
   end;
 
 begin
+  SetFocus;
   if Chart= nil then
     Exit;
   if InState(stAnimationPause) then
   begin
-    ClearState(stAnimationPause);
-    SetState(stResumeAnimation);
+    ResumeAnimation;
     Exit;
   end;
   if InState(stAnimating) then
   begin
     Exit;
   end;
-  SetFocus;
   if (FSeriesData.Count = 0) or InState(stUpdating) then
   begin
     inherited;
@@ -20599,24 +21093,20 @@ begin
   begin
     if (Key = VK_Space) then
     begin
-      ClearState(stAnimationPause);
-      SetState(stResumeAnimation);
+      ResumeAnimation;
     end
     else if Key = vk_Escape then
     begin
-      ClearState(stAnimationPause);
-      ClearState(stAnimating);
+      HaltAnimation;
+      Exit;
     end;
-
-    Exit;
   end
   else if InState(stAnimating) then
   begin
     if Key = vk_Escape then
     begin
-      ClearState(stAnimating);
+      HaltAnimation;
     end;
-
     Exit;
   end;
   if (FSeriesData.Count = 0) or InState(stUpdating) or InState(stInternalAction) then
@@ -20688,6 +21178,13 @@ begin
     Exit;
   end;
 
+  if InState(stAnimating) then
+  begin
+    HaltAnimation;
+    inherited;
+    Exit;
+  end;
+
   AnimEnabl := Chart.AnimationEnabled;
   Chart.AnimationEnabled := false;
   try
@@ -20713,10 +21210,11 @@ procedure TChartWriter.Loaded;
 begin
   if (csDesigning in ComponentState) and (Chart <>nil) then
   begin
-    CreateIds;
+    ConnectToWriter;
     Chart.InnerMargins.FWriter := FChart.Writer;
     Chart.GraphMargins.FWriter := FChart.Writer;
   end;
+  FLoading := True;
   inherited;
 end;
 
@@ -20814,7 +21312,6 @@ begin
     begin
       if (j > TheSer.LastItem) or (j < TheSer.FirstItem) then
       begin
-        Sleep(0);
         Continue;
       end;
       SerItm := NewSer.AddItem;
@@ -20901,11 +21398,6 @@ begin
 
 end;
 
-function TChartWriter.IsAnimating : Boolean;
-begin
-  Result := InState(stAnimating) or InState(stInitAnimation);
-end;
-
 function TChartWriter.IsCompressed : Boolean;
 begin
   Result := FCompressed;
@@ -20977,7 +21469,7 @@ begin
       end
       else
       begin
-        Y := AnAxis.FLabelTextRect.Bottom;// - 2;
+        Y := AnAxis.FLabelTextRect.Bottom;
       end;
     end;
 
@@ -20986,7 +21478,6 @@ begin
       Result := Point(X , Y)
     else
     begin
-      //Y := Y + c_HookMargin;
       Result := Point(X, Y);
     end;
 
@@ -21020,7 +21511,6 @@ begin
         X := AnAxis.FLabelTextRect.Right - GetTextWidth(LabelKind, ALabel);
     end;
     Y := Y- GetTextHeight(LabelKind) div 2;
-    //Result := Point(X, (Y - GetTextHeight(LabelKind) div 2));
     Result := Point(X, Y);
 
     if AnAxis is TNameAxis then
@@ -21144,7 +21634,7 @@ begin
             end;
           end;
           LastRealPt := FSeriesData[i].FBarPoints[FSeriesData[i].FBarPoints.Count - 1];
-          if j > FSeriesData[i].FirstItem then
+          if (j > FSeriesData[i].FirstItem) and not TCWBar(ActiveGraph).Compressing then
           begin
             AdjustBarPoint;
           end;
@@ -21153,7 +21643,7 @@ begin
       until SpaceSet;
     end;
 
-    if (Adds <> 0) and not Recalc then
+    if (Adds <> 0) and not Recalc and (TCWBar(ActiveGraph).GetCompressPercentage = 0) then
     begin
       if FNameAxis.IsXAxis then
         FRightSpace := FRightSpace - Adds
@@ -21458,6 +21948,8 @@ var
 begin
   if InState(stUpdating) then
     Exit;
+  if InState(stAnimating) then
+    Exit;
   ClearState(stLimbo); { Space to small, draws a static image }
   HasContracted := False;
   G := nil;
@@ -21480,8 +21972,8 @@ begin
 
   if (G = nil) or (ActiveGraph is TCWPie) then
   begin
-    if (ActiveGraph is TCWPie) and TCWPie(ActiveGraph).Animation then
-      InitAnimation;
+    if (ActiveGraph is TCWPie) and ActiveGraph.AnimationDef.Active then
+      DoInitAnimation;
     Exit;
   end;
   Canvas.Font.Assign(Font);
@@ -21588,17 +22080,12 @@ begin
   if not HasContracted and (ActiveGraph is TCWAxisGraph)
     and (Chart.AllEqual <> nil) and not InState(stLimbo) then
   begin
-    if ActiveGraph is TCWBar then
-    begin
-      if (TCWBar(ActiveGraph).FAnimations <> []) then
+    if ActiveGraph.AnimationDef.Active then
       begin
-        InitAnimation;
+        DoInitAnimation;
       end;
-    end
-    else if (ActiveGraph is TCWCurve) and TCWCurve(ActiveGraph).Animation then
-      InitAnimation;
   end;
-
+  FHasAnimated := True;
   FPosRect := GetPosRect;
   PostMessage(Handle, WM_AFTERBUILD, 0, 0);
   ClearState(stOverflow);
@@ -21638,7 +22125,6 @@ var
   MP: TPoint;
   i: integer;
   UniqueGraphs : TList<TCWGraph>;
-  Cnt : integer;
 
   procedure RedrawPoints;
   var
@@ -22186,6 +22672,7 @@ var
   end;
 
 begin
+  FLoading := false;
   if (Chart = nil)  then
   begin
     Canvas.Brush.Color := Color;
@@ -22211,7 +22698,6 @@ begin
     DrawEssentials;
     Exit;
   end;
-
 
   try
     if (Chart <> nil) and (Count > 0) then
@@ -22241,33 +22727,30 @@ begin
     try
       if InState(stAnimating) and not InState(stInitAnimation) and (VisibleCount > 0) then
       begin
+        if InState(stAnimationPause) then
+        begin
+           Canvas.Draw(0,0, FAnimBM);
+           Exit;
+        end;
+
         {The animation loop}
         UniqueGraphs := TList<TCWGraph>.Create;
-        Cnt := 0;
         try
-          DrawBorders;
-          while InState(stAnimating) do
           begin
-            ActiveGraph.SetDelay(Cnt);
             UniqueGraphs.Clear;
             for I := 0 to Chart.SeriesDefs.Count-1 do
             begin
              if UniqueGraphs.IndexOf(Chart.SeriesDefs[i].Graph) <> -1 then
               Continue;
-
-             Chart.SeriesDefs[i].Graph.Draw;
+             if FAnimStamp then
+               Chart.SeriesDefs[i].Graph.Draw;
              Canvas.Draw(0,0, FAnimBM);
              UniqueGraphs.Add(Chart.SeriesDefs[i].Graph);
-             inc(Cnt);
             end;
           end;
         finally
           UniqueGraphs.Free;
         end;
-
-       ClearState(stAnimationPause);
-       ClearState(stResumeAnimation);
-       Chart.FHasAnimated := True;
        Exit;
       end;
       if ViewMode = vmSelected then
@@ -22882,21 +23365,20 @@ var
   i: integer;
   Dt1, Dt2: TDateTime;
 begin
-  Result := 0;
+  Result := 1;
   if Chart = nil then
     Exit;
   Dt1 := Now; { To keep the compiler satisfied }
   Dt2 := Now;
   for i := 0 to FSeriesData.Count - 1 do
   begin
-    if IsTimeSpan then
+    if IsTimeSpan and (FSeriesData[i].Count > 1) then
     begin
       Dt1 := FSeriesData[i].ToDate(0);
       Dt2 := FSeriesData[i].ToDate(1);
     end;
     if FSeriesData[i].Count > 1 then
     begin
-
       if Chart.GetNameType = ntMonthSpan then
         Result := MonthsBetweenEx(Dt2, Dt1)
       else if Chart.GetNameType = ntDateSpan then
@@ -23348,7 +23830,6 @@ var
           Clr.Image.Bitmap.PixelFormat := pf24Bit;
           Clr.Image.Bitmap.Transparent := True;
          except
-           //GoBackError;
            raise;
          end;
         end;
@@ -23522,18 +24003,15 @@ var
 
   procedure SetAnims(Props : TStringList; G : TCWGraph);
   begin
-     G.FAnimation := Boolean(StrToInt(Props.Values[C_Animation]));
-     G.FAnimationSpeed := TAnimationSpeed(StrToInt(Props.Values[C_AnimationSpeed]));
-     G.FAnimationPause := StrToInt(Props.Values[C_AnimationPause]);
-     if G is TCWBar then
-     with G as TCWBar do
-     begin
-       FAnimations := [];
-       if StrToInt(Props.Values[C_AnGrow]) = 1 then
-         FAnimations := FAnimations + [anGrow];
-       if StrToInt(Props.Values[C_AnFlow]) = 1 then
-         FAnimations := FAnimations + [anFlow];
-     end;
+     G.AnimationDef.FDuration := StrToInt(Props.Values[C_Duration]);
+     G.AnimationDef.FSplitDuration := Boolean(StrToInt(Props.Values[C_SplitDuration]));
+     G.AnimationDef.FImmediate := Boolean(StrToInt(Props.Values[C_Immediate]));
+     G.AnimationDef.FPause := StrToInt(Props.Values[C_Pause]);
+     G.AnimationDef.FProgressTypes := [];
+     if StrToInt(Props.Values[C_AnGrow]) = 1 then
+       G.AnimationDef.FProgressTypes := G.AnimationDef.FProgressTypes + [anGrow];
+     if StrToInt(Props.Values[C_AnFlow]) = 1 then
+         G.AnimationDef.FProgressTypes := G.AnimationDef.FProgressTypes + [anFlow];
   end;
 
   procedure SetStats(Props : TStringList; G : TCWAxisGraph);
@@ -23714,7 +24192,7 @@ var
       while Indx <> -1 do
       begin
         sl.Clear;
-        for i := 1 to 4 do
+        for i := 1 to 5 do
         begin
           sl.Add(Props[Indx + i]);
         end;
@@ -23723,6 +24201,7 @@ var
         St.FLineStyle := TCurvelineStyle(StrToInt(sl.Values[C_CurveLineStyle]));
         St.FStyle := TCurveStyle(StrToInt(sl.Values[C_CurveStyle]));
         St.FLineWidth := StrToInt(sl.Values[C_CurveLineWidth]);
+        St.FBaselineValue := StrToInt(sl.Values[C_CurveBaseLineValue]);
         inc(Indx2);
         Indx := Props.IndexOf('{STYLE' + IntToStr(Indx2) + '}');
       end;
@@ -23850,6 +24329,7 @@ var
     C.FMouseTimeFormat := Props.Values[C_MouseTimeFormat];
     C.FGraphBGColor := TColor(StrToInt(Props.Values[C_GraphBGColor]));
     C.FGraphBorders := TGraphBorders(StrToInt(Props.Values[C_GraphBorders]));
+    C.FAnimationEnabled := Boolean(StrToInt(Props.Values[C_AnimationEnabled]));
 
     if Boolean(StrToInt(Props.Values[C_toName])) then
       C.FTextTilting := C.FTextTilting + [toName]
@@ -23990,12 +24470,12 @@ begin
   end;
 end;
 
-procedure TChartWriter.LoadFromFile(AFileName: TFileName; DoExecute : Boolean = True);
+procedure TChartWriter.LoadFromFile(AFileName: TFileName);
 var
   Files: TFiles;
   i: integer;
   ThisChart : TCWChart;
-
+  LoadChart : TCWChart;
   function GetTimeInterval(T1, T2: TDateTime; ASpanType: TSpanType): integer;
   begin
     Result := 0;
@@ -24013,35 +24493,66 @@ var
     end;
   end;
 
+  function CheckDup : TCWChart;
+  var
+    i : integer;
+  begin
+    Result := nil;
+    for I := 0 to ChartLoadList.Count-1 do
+     if SameText(ChartLoadList[i].FCWRFileName, AFileName) then
+     begin
+       Result := ChartLoadList[i];
+       Break;
+     end;
+  end;
+
 begin
   { Check file type }
+  if InState(stAnimating) then
+  begin
+      HaltAnimation;
+      AnimTimer(nil);
+      Repaint;
+      ShowGWError(msg_LoadAnim);
+  end;
   ThisChart := Chart;
   try
     if GetFileType(AFileName) = 0 then {Rich}
     begin
       if csDesigning in ComponentState then
         ShowGWError(msg_RichDesign);
+      LoadChart := CheckDup;
+      if LoadChart <> nil then
+      begin
+        Chart := LoadChart;
+        Exit;
+      end;
+
       if Chart <> nil then
         Chart.SaveCache;
       ResetIDS;
       LoadFromPropFile(AFileName);
-      CreateIDs;
+      ConnectToWriter;
       Chart.InnerMargins.FWriter := Chart.Writer;
       Chart.GraphMargins.FWriter := Chart.Writer;
       ClearState(stZoomed);
       Chart.FCWRFileName := AFileName;
       SetPosition(Chart.AxisOrientation);
-      if DoExecute and (Count > 0) then
+      if ActiveGraph.AnimationDef.Active then
+        FHasAnimated := false;
+      if (Count > 0) then
       begin
-        Execute;
-        if ActiveGraph is TCWPie then
-          CorrectPie
-        else
-         DoRepaint;
+        FLoadExec := True;
+        {Signals to Execute, in case of animation, that it should not call DoRepaint}
+        try
+         Execute;
+        finally
+          FLoadExec := false;
+        end;
+        DoRepaint;
       end;
       if Assigned(ChartList.FOnChange) then
         ChartList.FOnChange(Chart);
-
       Exit;
     end;
     if (Chart = nil) or (ActiveGraph=nil) then
@@ -24065,16 +24576,17 @@ begin
       Files.Free;
       ClearState(stPainting);  { Aborts paint method}
     end;
-    Chart.FFileName := AFileName;
+    Chart.FDataFileName := AFileName;
     ClearState(stZoomed);
-    if DoExecute then
-    begin
+
+    FLoadExec := True;
+    try
      Execute;
-     if ActiveGraph is TCWPie then
-        CorrectPie
-     else
-       DoRepaint;
+    finally
+     FLoadExec := false;
     end;
+    DoRepaint;
+
     if Assigned(FonDataChange) then
       FOnDataChange(Self);
   except on E:Exception do
@@ -24082,7 +24594,7 @@ begin
      if ThisChart <> nil then
      begin
        FChart := ThisChart;
-       CreateIDS;
+       ConnectToWriter;
        LoadFromcache;
        Execute;
      end
@@ -24397,7 +24909,7 @@ begin
   end;
 end;
 
-procedure TChartWriter.LoadDataFromCWRFile(AFileName: TFileName; DoExecute : Boolean = True);
+procedure TChartWriter.LoadDataFromCWRFile(AFileName: TFileName);
 var
   i : integer;
   SL : TStringList;
@@ -24482,17 +24994,25 @@ begin
     sl.Free;
     DataSl.Free;
   end;
-  if DoExecute then
-    Execute;
+  FLoadExec := True;
+  try
+     Execute;
+  finally
+     FLoadExec := false;
+  end;
 end;
 
 procedure TChartWriter.LoadFromDatabase(ADataset : TDataset;
- NameField, ValueFields : string; ATitle : string = ''; DoExecute : Boolean = True);
+ NameField, ValueFields : string; ATitle : string = '');
 begin
   Clear;
   AddSeries(ADataSet, NameField, ValueFields, ATitle);
-  if DoExecute then
-    Execute;
+  FLoadExec := True;
+  try
+     Execute;
+  finally
+     FLoadExec := false;
+  end;
 end;
 
 procedure TChartWriter.SaveToFile(AFileName: TFileName; FileFormat : TSaveFormat =sfDataOnly;
@@ -24528,7 +25048,7 @@ var
     saveSL.Add(S);
   end;
 
-  procedure SetBarAnimOpt(AnOption: TAnimation ; AnimOptions: TAnimations;
+  procedure SetBarAnimOpt(AnOption: TProgressType ; AnimOptions: TProgressTypes;
   AValue: string);
   begin
     S := AValue + '=0';
@@ -24778,10 +25298,29 @@ var
   end;
 
   procedure SetAnimations(G : TCWGraph);
+  var
+    S : string;
   begin
-    SetKeyVal(saveSL, C_Animation, IntToStr(Ord(G.Animation)));
-    SetKeyVal(saveSL, C_AnimationSpeed, IntToStr(Ord(G.AnimationSpeed)));
-    SetKeyVal(saveSL, C_AnimationPause, IntToStr(G.AnimationPause));
+    SetKeyVal(saveSL, C_Duration, IntToStr(G.AnimationDef.Duration));
+    SetKeyVal(saveSL, C_SplitDuration, IntToStr(Ord(G.AnimationDef.SplitDuration)));
+    SetKeyVal(saveSL, C_Immediate, IntToStr(Ord(G.AnimationDef.Immediate)));
+    SetKeyVal(saveSL, C_Pause, IntToStr(G.AnimationDef.Pause));
+
+    if anFlow in G.AnimationDef.ProgressTypes then
+    begin
+      S := C_AnFlow + '=1';
+    end
+    else
+      S := C_AnFlow + '=0';
+    saveSL.Add(S);
+
+    if anGrow in G.AnimationDef.ProgressTypes then
+    begin
+      S := C_AnGrow + '=1';
+    end
+    else
+      S := C_AnGrow + '=0';
+    saveSL.Add(S);
   end;
 
   procedure SetStats(G : TCWAxisGraph);
@@ -24830,10 +25369,12 @@ var
         IntToStr(Ord(c.SeriesStyles.Items[i].LineStyle)));
       SetKeyVal(saveSL, C_CurveLineWidth,
         IntToStr(Ord(c.SeriesStyles.Items[i].LineWidth)));
+      SetKeyVal(saveSL, C_CurveBaselineValue,
+        FormatNum(c.SeriesStyles.Items[i].BaselineValue,ValuePrecision));
     end;
   end;
 
-  procedure GetBarProps(B: TCWBar);
+    procedure GetBarProps(B: TCWBar);
   begin
     saveSL.Add('[BAR]');
     inc(BCnt);
@@ -24858,8 +25399,7 @@ var
     SetBarTextOpt(tcValue, B.TextContents, C_tcValue);
     SetBarTextOpt(tcTitle, B.TextContents, C_tcTitle);
     SetBarTextOpt(tcPercentage, B.TextContents, C_tcPercentage);
-    SetBarAnimOpt(anFlow, B.Animations, C_AnFlow);
-    SetBarAnimOpt(anGrow, B.Animations, C_AnGrow);
+    SetBarAnimOpt(anFlow, B.AnimationDef.ProgressTypes, C_AnFlow);
     SetAnimations(B);
     SetStats(B);
   end;
@@ -24997,6 +25537,7 @@ var
         sl.Free;
      end;
      SaveSl.SaveToFile(AFileName);
+     Chart.FDataFileName := AFileName;
     finally
       saveSL.Free;
     end;
@@ -25124,6 +25665,7 @@ begin
     saveSl.Add(C_MouseTimeFormat + '=' + Chart.MouseTimeFormat);
     saveSl.Add(C_GraphBGColor + '=' + IntToStr(Chart.FGraphBGColor));
     saveSl.Add(C_GraphBorders + '=' + IntToStr(Ord(Chart.FGraphBorders)));
+    saveSl.Add(C_AnimationEnabled + '=' + IntToStr(Ord(Chart.FAnimationEnabled)));
 
     S := C_toName +'=0';
     if toName in Chart.FTextTilting then
@@ -25148,6 +25690,7 @@ begin
     saveSL.Add(EOF);
 
     saveSL.SaveToFile(AFileName);
+    Chart.FCWRFileName := AFileName;
   finally
     saveSL.Free;
   end;
@@ -26986,11 +27529,17 @@ function TChartWriter.GetNameFloatUnit: single;
 begin
   if FNameAxis.IsXAxis then
   begin
-    Result := GetPosRect.Width / (NameCount - 1)
+    if NameCount = 1 then
+      Result := GetPosRect.Width
+    else
+      Result := GetPosRect.Width / (NameCount - 1)
   end
   else
   begin
-    Result := GetPosRect.Height / (NameCount - 1);
+    if NameCount = 1 then
+      Result := GetPosRect.Height
+    else
+     Result := GetPosRect.Height / (NameCount - 1);
   end;
 end;
 
@@ -28120,7 +28669,7 @@ begin
         Dt2 := UnixToDateTime(StrToInt(S2))
        else if TimeType = ttISo8601 then
         Dt2 := ISO8601ToDate(S2)
-       else if not TryStrToDateTime(S2, Dt2) then
+       else if not TryStrToDateTime(S2, Dt2, Fmt) then
        begin
          Result.NameType := ntGeneral;
        end;
@@ -28225,11 +28774,12 @@ begin
     and ((Chart.AllEqual = AsGraph) or (Chart.AllEqual = nil)) then
     {If not AllEqual there wil be no way back to the originals}
      Exit;
+   if InState(stAnimating) or InState(stInitAnimation) then
+     HaltAnimation;
 
    Replaced := false;
    BeginUpdate;
    try
-
      ChartList.FPrevChart.FChart := FChart;
      if FChart <> nil then
       ChartList.FPrevChart.FGraph := FChart.AllEqual
@@ -28246,20 +28796,20 @@ begin
      AChart.ReplaceGraphs(AsGraph);
      if AChart = Chart then
      begin
-      Chart.FHasAnimated := False;
-      CreateIDS;
+      FHasAnimated := False;
+      ConnectToWriter;
       if Count = 0 then
         Exit;
-       if (Contraction <> 1) or (AChart.NameScale.OverflowAction = ovScrolling) then
+      if (Contraction <> 1) or (AChart.NameScale.OverflowAction = ovScrolling) then
+      begin
          Reload
-       else
-       begin
+      end
+      else
+      begin
          RefreshChart;
-         if ActiveGraph is TCWPie then
-            CorrectPie;
-       end;
-       Replaced := True;
-       Exit;
+      end;
+      Replaced := True;
+      Exit;
      end;
      Chart := AChart;
    finally
@@ -28279,13 +28829,17 @@ var
   Msg : TMessage;
   M : TMSG;
   G1, G2 : TCWGrapH;
+  DataLoaded : Boolean;
 begin
   if Value = FChart then
     Exit;
+  DataLoaded := false;
+  if InState(stAnimating) then
+     HaltAnimation;
   if csLoading in ComponentState then
   begin
     FChart := Value;
-    FChart.FHasAnimated := false;
+    FHasAnimated := false;
     if FChart <> nil then
     begin
       SetPosition(Value.AxisOrientation);
@@ -28312,9 +28866,9 @@ begin
     end;
   end;
 
-  if (Value <> nil) and (Value.FileName <> '') and not Value.IsCached then
+  if (Value <> nil) and (Value.DataFileName <> '') and not Value.IsCached then
   begin
-    if GetFileType(Value.FileName) <> 1 then
+    if GetFileType(Value.DataFileName) <> 1 then
       ShowGWError(msg_RichDesign)
   end;
 
@@ -28349,7 +28903,7 @@ begin
    end;
 
    try
-    CreateIDS;
+    ConnectToWriter;
    except
     FChart := nil;
     GoBackError;
@@ -28361,7 +28915,7 @@ begin
    FChart.GraphMargins.FWriter := FChart.Writer;
 
    SetPosition(Value.AxisOrientation);
-   FChart.FHasAnimated := false;
+   FHasAnimated := false;
    FChart.FreeNotification(Self);
    if not (csDesigning in ComponentState) or ((csDesigning in ComponentState) and LiveGraphs) then
    begin
@@ -28370,10 +28924,11 @@ begin
        LoadFromCache;
        Execute;
      end
-     else if (FChart.Dataset <> nil) or (FChart.FileName <> '')
+     else if (FChart.Dataset <> nil) or (FChart.DataFileName <> '')
      or ((csDesigning in ComponentState) and LiveGraphs) then
      begin
       WMLOADFILE(Msg);
+      DataLoaded := True;
      end
      else if Assigned(FChart.FOnGetData) then
      begin
@@ -28397,14 +28952,7 @@ begin
     Exit;
   end;
 
-  if Chart is TCWPieChart then
-  begin
-    if (TCWPie(ActiveGraph).Style = psDisc) and not TCWPie(ActiveGraph).Animation then
-      CorrectPie
-    else
-      DoRepaint;
-  end
-  else
+  if not DataLoaded then
     DoRepaint;
 
   if ChartList.IndexOf(FChart, ActiveGraph) = -1 then
@@ -28743,7 +29291,7 @@ begin
       Continue;
     Ser := FSeriesData[i];
     G := ActiveGraph;
-    if not(G is TCWCurve) then  {ToDo: Does not work with mixed graphs}
+    if not(G is TCWCurve) then
       raise TCWException.Create('Graph is not a curve');
     for j := 0 to Ser.ItemPoints.Count - 1 do
     begin
@@ -29074,6 +29622,9 @@ begin
   if InState(stPainting) then
     Exit;
 
+  if InState(stAnimating) and FAnimRunning then
+    Exit;
+
   if (csDesigning in componentState) then
   begin
     Invalidate;
@@ -29084,7 +29635,7 @@ begin
   if InState(stUpdating) or (FSeriesData.Count = 0) then
     Exit;
 
-  if (InState(stAnimating)) and not (csDesigning in ComponentState) then
+  if InState(stAnimating) and not (csDesigning in ComponentState) then
   begin
     DoAnimation;
     Exit;
@@ -29426,12 +29977,11 @@ begin
      Result := Chart.ValueScale2;
 end;
 
-procedure TChartWriter.CreateIDS;
+procedure TChartWriter.ConnectToWriter;
 var
   C : TCWChart;
   i : integer;
 begin
-   //DeleteFromWList(Self);
    C := Chart;
    if C = nil then
      Exit;
@@ -29789,15 +30339,13 @@ end;
 initialization
 Fmt := TFormatSettings.Create;
 WriterList := TWriterList.Create;
-//System.ReportMemoryLeaksOnShutdown := True;
+ChartLoadList := TChartLoadList.Create;
+System.ReportMemoryLeaksOnShutdown := True;
 StrictProtection := True;
-(*Log := TStringlist.Create;
-StartLog := false;
-Plus := 0;
-Mins := 0;*)
 
 finalization
 WriterList.Free;
+ChartLoadList.Free;
 
 end.
 

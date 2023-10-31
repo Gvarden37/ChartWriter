@@ -7,7 +7,8 @@ uses
   form_Pen in 'form_Pen.pas' {formPen},
   form_Sections in 'form_Sections.pas' {formSections},
   form_data in 'form_data.pas' {frmData},
-  form_New in 'form_New.pas' {frm_New};
+  form_New in 'form_New.pas' {frm_New},
+  form_ChartList in 'form_ChartList.pas' {frm_ChartList};
 
 {$R *.res}
 
@@ -21,5 +22,6 @@ begin
   Application.CreateForm(TformSections, formSections);
   Application.CreateForm(TfrmData, frmData);
   Application.CreateForm(Tfrm_New, frm_New);
+  Application.CreateForm(Tfrm_ChartList, frm_ChartList);
   Application.Run;
 end.

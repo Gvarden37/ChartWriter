@@ -1,5 +1,16 @@
 unit frmMain;
 
+{ NOTE!
+Before running you must, in the FormCreate event handler of form_ChartList,
+change the statement CW.LoadFromFile('CO2Graph.CWR') to
+CW.LoadFromFile('..\Demo Compiled\CO2Graph.CWR'), else you get a file not found error.
+
+The CW components are not active. They were used to construct the CO2Graph.CWR file
+which is loaded at start up.
+
+The components can be reactivated by setting CW.Chart to Chart_CO2 and remove the
+Load... statement from the FromCreate event handler.}
+
 interface
 
 uses
@@ -181,9 +192,6 @@ type
     ePrecision2: TEdit;
     Label12: TLabel;
     eValuePrecision: TEdit;
-    cbxCurveAnimation: TCheckBox;
-    cbCurveAnimationSpeed: TComboBox;
-    lbCurveAnimationSpeed: TLabel;
     eCurveMinPointSpacing: TEdit;
     eCurveMaxPointSpacing: TEdit;
     Label50: TLabel;
@@ -194,18 +202,13 @@ type
     sbFont: TSpeedButton;
     acCurveFont: TFontEdit;
     lbCurveFontName: TLabel;
-    eCurveAnimationPause: TEdit;
-    Label56: TLabel;
     Label57: TLabel;
     GroupBox1: TGroupBox;
-    Label49: TLabel;
     Label54: TLabel;
     Label55: TLabel;
-    eCurveBaseLine: TEdit;
     cbNeighborAreaColor: TColorBox;
     cbxAreaOutLine: TCheckBox;
     cbAreaOutLineColor: TColorBox;
-    sbApplyOnAll: TSpeedButton;
     acApply: TAction;
     lbApplyOn: TListBox;
     cbBarStyle: TComboBox;
@@ -232,20 +235,12 @@ type
     gbBarAnimation: TGroupBox;
     lbBarAnimationSpeed: TLabel;
     Label70: TLabel;
-    cbBarAnimationSpeed: TComboBox;
     eBarAnimationPause: TEdit;
     lbxBarAnimations: TCheckListBox;
-    Label72: TLabel;
-    sbBarAnimationApply: TSpeedButton;
     Label64: TLabel;
     acApplyBarAnim: TAction;
     Label60: TLabel;
     cbPieStyle: TComboBox;
-    Label69: TLabel;
-    Label71: TLabel;
-    cbxPieAnimation: TCheckBox;
-    cbPieAnimationSpeed: TComboBox;
-    ePieAnimationPause: TEdit;
     SpeedButton1: TSpeedButton;
     lbPieFont: TLabel;
     lbxPieOptions: TCheckListBox;
@@ -273,11 +268,7 @@ type
     Label80: TLabel;
     cbxCurveKeepFontColor: TCheckBox;
     cbxPieKeepFontColor: TCheckBox;
-    lbCharts: TListBox;
-    Label86: TLabel;
     Label87: TLabel;
-    Label88: TLabel;
-    Label89: TLabel;
     tab_Commons: TTabSheet;
     cbRulers: TComboBox;
     Label91: TLabel;
@@ -393,11 +384,8 @@ type
     pmSeries: TPopupMenu;
     MenuItem2: TMenuItem;
     MenuItem4: TMenuItem;
-    Label43: TLabel;
     Label103: TLabel;
-    seAnimationBooster: TSpinEdit;
     Label104: TLabel;
-    Label105: TLabel;
     Label106: TLabel;
     GroupBox3: TGroupBox;
     Label47: TLabel;
@@ -434,6 +422,39 @@ type
     cbxLiveResize: TCheckBox;
     cbxImageLabels: TCheckBox;
     cbxAntiAliasing: TCheckBox;
+    seBarAnimDuration: TSpinEdit;
+    GroupBox6: TGroupBox;
+    Label71: TLabel;
+    Label88: TLabel;
+    Label89: TLabel;
+    Label114: TLabel;
+    Label115: TLabel;
+    cbxPieAnimation: TCheckBox;
+    ePieAnimationPause: TEdit;
+    sePieAnimDuration: TSpinEdit;
+    GroupBox7: TGroupBox;
+    Label56: TLabel;
+    Label43: TLabel;
+    Label105: TLabel;
+    Label113: TLabel;
+    Label72: TLabel;
+    cbxCurveAnimation: TCheckBox;
+    eCurveAnimationPause: TEdit;
+    seAnimDuration: TSpinEdit;
+    Label69: TLabel;
+    cbxCurveAnimSplit: TCheckBox;
+    cbxBarSplitDuration: TCheckBox;
+    cbxPieSplitDuration: TCheckBox;
+    sbApplyOnAll: TButton;
+    sbBarAnimationApply: TButton;
+    eCurveBaseLine: TEdit;
+    Label49: TLabel;
+    acClose: TAction;
+    Close1: TMenuItem;
+    acChartList: TAction;
+    ToolButton12: TToolButton;
+    ToolButton13: TToolButton;
+    acChartList1: TMenuItem;
     procedure FileOpen1Accept(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -509,7 +530,6 @@ type
     procedure sbMoreVSectionsClick(Sender: TObject);
     procedure cbxVSectionsVisibleClick(Sender: TObject);
     procedure cbxNSectionsVisibleClick(Sender: TObject);
-    procedure lbChartsClick(Sender: TObject);
     procedure acNextPageExecute(Sender: TObject);
     procedure acUnzoomExecute(Sender: TObject);
     procedure acDashbordExecute(Sender: TObject);
@@ -580,6 +600,16 @@ type
     procedure cbCurveStatLineChange(Sender: TObject);
     procedure cbxImageLabelsClick(Sender: TObject);
     procedure cbxAntiAliasingClick(Sender: TObject);
+    procedure seAnimDurationExit(Sender: TObject);
+    procedure CWEndAnimation(Sender: TObject);
+    procedure CWStartAnimation(Sender: TObject);
+    procedure cbxCurveAnimSplitClick(Sender: TObject);
+    procedure eCurveAnimationPauseExit(Sender: TObject);
+    procedure FileSaveAs1BeforeExecute(Sender: TObject);
+    procedure CWSuspendAnimation(Sender: TObject);
+    procedure acCloseUpdate(Sender: TObject);
+    procedure acCloseExecute(Sender: TObject);
+    procedure acChartListExecute(Sender: TObject);
   private
     { Private declarations}
     FGraph1, FGraph2 : TCWGraph;
@@ -588,6 +618,7 @@ type
     FBarControls : TBarControls;
     FPieControls : TPieControls;
     FSizing : Boolean;
+    procedure ResetGenerals;
     function SerIndex : integer;
     function SelGraph : TCWGraph;
     procedure FillChartControls;
@@ -597,7 +628,6 @@ type
     procedure SyncSectionValues(AList : TListBox);
     procedure SyncLegends(Indx : integer);
     procedure SetVisibleTabs(GraphsOnly : Boolean = false);
-    procedure CO2;
     procedure ChartChange(Sender : TObject);
     procedure ShowData;
     procedure CreateChart;
@@ -617,83 +647,15 @@ type
    function DisableCBXEvent(ACBX : TObject) : TNotifyEvent;
    procedure OnLoadChart;
   end;
-
-  function CountWholeMonths(const StartDate, EndDate: TDateTime): Integer;
-
 var
   form_main: Tform_main;
   fram : TFrame1;
   CurveFrames : TList<TFrame1>;
 
 implementation
+uses form_ChartList;
 
 {$R *.dfm}
-
-
-
-function CountWholeMonths(const StartDate, EndDate: TDateTime): Integer;
-var
-  StartYear, StartMonth, StartDay: Word;
-  EndYear, EndMonth, EndDay: Word;
-  WholeMonths: Integer;
-begin
-  // Extract year, month, and day components from the start and end dates
-  DecodeDate(StartDate, StartYear, StartMonth, StartDay);
-  DecodeDate(EndDate, EndYear, EndMonth, EndDay);
-
-  // Calculate the difference in years and months
-  WholeMonths := (EndYear - StartYear) * 12 + (EndMonth - StartMonth);
-
-  // Adjust the count if the end day is earlier than the start day
-  if EndDay < StartDay then
-    Dec(WholeMonths);
-
-  Result := WholeMonths;
-end;
-
-procedure TForm_Main.CO2;
-var
-  sl : TStringList;
-  i : integer;
-  s, S2 : string;
-  P, P2 : integer;
-  Res : string;
-  Out : TStringList;
-  N : integer;
-begin
-  sl := TStringList.Create;
-  Out := TStringList.Create;
-  sl.LoadFromFile('C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\CO2.Txt');
-  for I := 0 to sl.Count-1 do
-  begin
-    Res := '';
-    S := Trim(sl[i]);
-    S := StringReplace(S, '      ', '|', [rfReplaceAll]);
-    S := StringReplace(S, '    ', '|', [rfReplaceAll]);
-    S := StringReplace(S, '   ', '|', [rfReplaceAll]);
-    P := Pos('|', S);
-    Res := Copy(S,1, P-1); {Y}
-    Delete(S, 1, P);
-    P2 := Pos('|', S, P+1);
-    P := Pos('|', S);
-    S2 := Copy(S,1, P-1); {M}
-    if Length(S2) = 1 then
-     S2 := '0' + S2;
-    S2 := '01.' + S2;
-    Res := S2 + '.' + Res;
-    Delete(S, 1, P);
-    P := Pos('|', S);
-    P2 :=  Pos('|', S, P +1);
-    S2 := Copy(S,P+1, P2-P-1); {CO2}
-    S2 := StringReplace(S2, '.', '', [rfReplaceAll]);
-    N := StrToInt(S2) * 10;
-    S := IntToStr(N);
-    Res := Res + '=' + S; {CO2}
-    Out.Add(Res);
-  end;
-  Out.SaveToFile('C:\Users\47994\Documents\Embarcadero\Studio\Projects\CWDemo\Graphs\CO2Graph3.Txt');
-end;
-
 
 constructor TGraphControls.Create(AGraph: TCWGraph; AForm : TForm_Main);
 begin
@@ -709,13 +671,14 @@ var
   E : TNotifyEvent;
   i : integer;
 begin
+   if Frm.CW.Chart = nil then
+     Exit;
    G := Graph as TCWCurve;
    Frm.cbNeighborAreaColor.Selected := G.AreaBrush.Color;
    E := Frm.DisableCBXEvent(Frm.cbxAreaOutLine);
    Frm.cbxAreaOutLine.Checked := G.AreaOutline;
    Frm.cbxAreaOutLine.OnClick := E;
    Frm.cbAreaOutLineColor.Selected := G.AreaOutlineColor;
-   Frm.eCurveBaseLine.Text := FloatToStr(G.BaseLineValue);
    Frm.eCurveMinPointSpacing.Text := IntToStr(G.MinPointSpacing);
    Frm.eCurveMaxPointSpacing.Text := IntToStr(G.MaxPointSpacing);
    Frm.cbNeighborAreaColor.Selected := G.AreaBrush.Color;
@@ -727,10 +690,13 @@ begin
    Frm.lbCurveFontName.Caption := G.Font.Name + ' ' + IntToStr(G.Font.Size);
    Frm.lbCurveFontName.Font.Color := G.Font.Color;
    E := Frm.DisableCBXEvent(Frm.cbxCurveAnimation);
-   Frm.cbxCurveAnimation.Checked := G.Animation;
+   Frm.cbxCurveAnimation.Checked := G.AnimationDef.Active;
    Frm.cbxCurveAnimation.OnClick := E;
-   Frm.cbCurveAnimationSpeed.ItemIndex := Ord(G.AnimationSpeed);
-   Frm.eCurveAnimationPause.Text := IntToStr(G.AnimationPause);
+   E := Frm.DisableCBXEvent(Frm.cbxCurveAnimSplit);
+   Frm.cbxCurveAnimSplit.Checked := G.AnimationDef.SplitDuration;
+   Frm.cbxCurveAnimSplit.OnClick := E;
+   Frm.seAnimDuration.Value := G.AnimationDef.Duration;
+   Frm.eCurveAnimationPause.Text := IntToStr(G.AnimationDef.Pause);
    Frm.lbApplyOn.Clear;
    Frm.lbApplyOn.Items.Add('All series');
    if Frm.CW.Chart.SeriesDefs.Count > 1 then
@@ -768,15 +734,19 @@ var
   LW : integer;
   LS: TCurveLineStyle;
   St : TCurveStyle;
+  BS : single;
 
   procedure SetStyle;
   begin
      Styl.Style := St;
      Styl.LineStyle := LS;
      Styl.LineWidth := LW;
+     Styl.BaseLineValue := BS;
   end;
 
 begin
+   if Frm.CW.Chart =  nil then
+    Exit;
    if FRM.CW.IsAnimating then
     Exit;
    Frm.CW.BeginUpdate;
@@ -786,12 +756,13 @@ begin
      LW := StrToInt(Frm.eLineWidth.Text);
      LS := TCurveLineStyle(Frm.cbLineStyle.ItemIndex);
      St := TCurveStyle(Frm.cbCurveStyle.ItemIndex);
+     BS := StrToFloat(Frm.eCurveBaseline.Text);
      if (Ctrl = nil) then
      begin
       try
        if FStyleIndex = -1 then
        begin
-         G.SeriesStyles.ApplyOnAll(St, LS, LW);
+         G.SeriesStyles.ApplyOnAll(St, LS, LW, BS);
          Exit;
        end;
        Tit := Frm.lbApplyOn.Items[Frm.lbApplyon.ItemIndex];
@@ -810,7 +781,8 @@ begin
        begin
           if (G.Style <> TCurveStyle(Frm.cbCurveStyle.ItemIndex))
           or (G.LineStyle <> TCurveLineStyle(Frm.cbLineStyle.ItemIndex))
-          or (G.LineWidth <> StrToInt(Frm.eLineWidth.Text)) then
+          or (G.LineWidth <> StrToInt(Frm.eLineWidth.Text))
+          or (FormatNum(G.BaselineValue,1) <> Frm.eCurveBaseline.Text) then
           begin
              if Tit <> '' then
              begin
@@ -848,10 +820,13 @@ begin
      G.AreaBrush.Color := Frm.cbNeighborAreaColor.Selected;
      G.BeaconPoints := Frm.cbxCurveBeaconPoints.Checked;
      G.PointMarkers := TPointMarkers(Frm.cbCurvePointMarkers.ItemIndex);
-     DoAnimation := not G.Animation and Frm.cbxCurveAnimation.Checked;
-     G.Animation := Frm.cbxCurveAnimation.Checked;
-     G.AnimationSpeed := TAnimationSpeed(Frm.cbCurveAnimationSpeed.ItemIndex);
-     G.AnimationPause := StrToInt(Frm.eCurveAnimationPause.Text);
+     DoAnimation := not G.AnimationDef.Active and Frm.cbxCurveAnimation.Checked;
+     if Frm.cbxCurveAnimation.Checked then
+      G.AnimationDef.ProgressTypes := [anFlow]
+     else
+      G.AnimationDef.ProgressTypes := [];
+     G.AnimationDef.Duration := Frm.seAnimDuration.Value;
+     G.AnimationDef.Pause := StrToInt(Frm.eCurveAnimationPause.Text);
      G.StatLine := TStatLine(Frm.cbCurveStatLine.ItemIndex);
      G.StatBackgroundBlending := Frm.tbStatBGBlending.Position;
      G.StatLineWidth := Frm.eStatLineWidth.Value;
@@ -884,6 +859,7 @@ var
      Frm.cbCurveStyle.ItemIndex := Ord(Styl.Style);
      Frm.cbLineStyle.ItemIndex := Ord(Styl.LineStyle);
      Frm.eLineWidth.Text := IntToStr(Styl.LineWidth);
+     Frm.eCurveBaseLine.Text := Formatnum(Styl.BaseLineValue,1);
  end;
 
 begin
@@ -894,6 +870,7 @@ begin
        Frm.cbCurveStyle.ItemIndex := Ord(Style);
        Frm.cbLineStyle.ItemIndex := Ord(LineStyle);
        Frm.eLineWidth.Text := IntToStr(LineWidth);
+       Frm.eCurveBaseLine.Text := Formatnum(BaseLineValue,1);
        Exit;
      end;
      Tit := Chart.SeriesDefs[FStyleIndex].Title;
@@ -913,6 +890,7 @@ begin
         Frm.cbCurveStyle.ItemIndex := Ord(Style);
         Frm.cbLineStyle.ItemIndex := Ord(LineStyle);
         Frm.eLineWidth.Text := IntToStr(LineWidth);
+        Frm.eCurveBaseLine.Text := Formatnum(BaseLineValue,1);
      end;
    end;
 end;
@@ -923,6 +901,8 @@ var
   G : TCWBar;
   E : TNotifyEvent;
 begin
+  if Frm.CW.Chart = nil then
+     Exit;
   G := Graph as TCWBar;
   Frm.cbBarStyle.ItemIndex := Ord(G.BarStyle);
   Frm.cbLayout.ItemIndex := Ord(G.Layout);
@@ -940,17 +920,19 @@ begin
   Frm.lbxBarTexts.Checked[1] := tcName in G.TextContents;
   Frm.lbxBarTexts.Checked[2] := tcTitle in G.TextContents;
   Frm.lbxBarTexts.Checked[3] := tcPercentage in G.TextContents;
-  Frm.eBarBaselineValue.Text := FloatToStr(G.BaseLineValue);
+  Frm.eBarBaselineValue.Text := FormatNum(G.BaseLineValue,1);
   E := Frm.DisableCBXEvent(Frm.cbxShowQualifier);
   Frm.cbxShowQualifier.Checked := G.ShowQualifier;
   Frm.cbxShowQualifier.OnClick := E;
   Frm.eCubeAngle.Text := IntToStr(G.CubeAngle);
   Frm.eCubeDepth.Text := IntToStr(G.CubeDepth);
-  Frm.lbxBarAnimations.Checked[0] := anFlow in G.Animations;
-  Frm.lbxBarAnimations.Checked[1] := anGrow in G.Animations;
-  Frm.cbBarAnimationSpeed.ItemIndex := Ord(G.AnimationSpeed);
-  Frm.seAnimationBooster.Value := G.AnimationBooster;
-  Frm.eBarAnimationPause.Text := IntToStr(G.AnimationPause);
+  Frm.lbxBarAnimations.Checked[0] := anFlow in G.AnimationDef.ProgressTypes;
+  Frm.lbxBarAnimations.Checked[1] := anGrow in G.AnimationDef.ProgressTypes;
+  E := Frm.DisableCBXEvent(Frm.cbxBarSplitDuration);
+  Frm.cbxBarSplitDuration.Checked := G.AnimationDef.SplitDuration;
+  Frm.cbxBarSplitDuration.OnClick := E;
+  Frm.seBarAnimDuration.Value := G.AnimationDef.Duration;
+  Frm.eBarAnimationPause.Text := IntToStr(G.AnimationDef.Pause);
   E := Frm.DisableCBXEvent(Frm.cbxBarKeepFontColor);
   Frm.cbxBarKeepFontColor.Checked := G.KeepFontColor;
   Frm.cbxBarKeepFontColor.OnClick := E;
@@ -968,19 +950,19 @@ end;
 procedure TBarControls.ApplyAnimations;
 var
   G : TCWBar;
-  An : TAnimations;
+  An : TProgressTypes;
 begin
   An := [];
   if Frm.lbxBarAnimations.Checked[0] then An := AN + [anFlow];
   if Frm.lbxBarAnimations.Checked[1] then An := AN + [anGrow];
 
   G := Graph as TCWBar;
-  G.AnimationSpeed := TAnimationSpeed(Frm.cbBarAnimationSpeed.ItemIndex);
-  G.AnimationBooster := Frm.seAnimationBooster.Value;
-  G.AnimationPause := StrToInt(Frm.eBarAnimationPause.Text);
-  G.Animations := An;
-  if G.Animations <> [] then
-   if Frm.CW.Chart.PerformAnimation <> AN_OK then
+  G.AnimationDef.Pause := StrToInt(Frm.eBarAnimationPause.Text);
+  G.AnimationDef.Duration := Frm.seBarAnimDuration.Value;
+  G.AnimationDef.ProgressTypes := An;
+  G.AnimationDef.SplitDuration := Frm.cbxBarSplitDuration.Checked;
+  if G.AnimationDef.Active then
+   if Frm.CW.PerformAnimation <> AN_OK then
     raise Exception.Create('Failed');
 end;
 
@@ -989,7 +971,10 @@ var
   G : TCWBar;
   Opt : TBarOptions;
   Txt : TTextContents;
+  Anim : TProgressTypes;
 begin
+  if FRM.CW.Chart = nil then
+    Exit;
   if FRM.CW.IsAnimating then
     Exit;
   FRM.CW.BeginUpdate;
@@ -1019,7 +1004,10 @@ begin
     if Frm.lbxBarTexts.Checked[3] then Txt := Txt + [tcPercentage];
     G.TextContents := Txt;
 
-
+    Anim := [];
+    if Frm.lbxBarAnimations.Checked[0] then Anim := Anim + [anFlow];
+    if Frm.lbxBarAnimations.Checked[1] then Anim := Anim + [anGrow];
+    G.AnimationDef.ProgressTypes := Anim;
 
     G.BaseLineValue := StrToFloat(Frm.eBarBaselineValue.Text);
     G.ShowQualifier := Frm.cbxShowQualifier.Checked;
@@ -1033,6 +1021,7 @@ begin
      begin
        G.SMAPeriods := StrToInt(Frm.eSMAPeriods.Text);
      end;
+    G.AnimationDef.Duration := Frm.seBarAnimDuration.Value;
 
    except
      FRM.CW.CancelUpdate;
@@ -1050,12 +1039,14 @@ var
   G : TCWPie;
   E : TNotifyEvent;
 begin
+    if Frm.CW.Chart = nil then
+     Exit;
     G := Graph as TCWPie;
     Frm.cbPieStyle.ItemIndex := Ord(G.Style);
     Frm.ePieSize.Text := IntToStr(G.PieSize);
     Frm.eDoughnutSize.Text := IntToStr(G.DoughnutSize);
     Frm.eStartAngle.Text := IntToStr(G.StartAngle);
-    Frm.eSliceSpacing.Text := FloatToStr(G.SliceSpacing);
+    Frm.eSliceSpacing.Text := FormatNum(G.SliceSpacing,1);
     Frm.eDiscDepth.Text := IntToStr(G.DiscDepth);
     Frm.eSlope.Text := IntToStr(G.Slope);
     Frm.eValuePrecision.Text := IntToStr(G.ValuePrecision);
@@ -1068,10 +1059,13 @@ begin
     if poPinText in G.Options then Frm.lbxPieOptions.Checked[6]:= True;
     if poClientBorder in G.Options then Frm.lbxPieOptions.Checked[7]:= True;
     E := Frm.DisableCBXEvent(Frm.cbxPieAnimation);
-    Frm.cbxPieAnimation.Checked := G.Animation;
+    Frm.cbxPieAnimation.Checked := G.AnimationDef.Active;
     Frm.cbxPieAnimation.OnClick := E;
-    Frm.cbPieAnimationSpeed.ItemIndex := Ord(G.AnimationSpeed);
-    Frm.ePieAnimationPause.Text := IntToStr(G.AnimationPause);
+    Frm.sePieAnimDuration.Value := G.AnimationDef.Duration;
+    Frm.ePieAnimationPause.Text := IntToStr(G.AnimationDef.Pause);
+    E := Frm.DisableCBXEvent(Frm.cbxPieSplitDuration);
+    Frm.cbxPieSplitDuration.Checked := G.AnimationDef.SplitDuration;
+    Frm.cbxPieSplitDuration.OnClick := E;
     E := Frm.DisableCBXEvent(Frm.cbxPieKeepFontColor);
     Frm.cbxPieKeepFontColor.Checked := G.KeepFontColor;
     Frm.cbxPieKeepFontColor.OnClick := E;
@@ -1088,6 +1082,8 @@ var
   Anim : Boolean;
 begin
   if FRM.CW.IsAnimating then
+    Exit;
+  if FRM.CW.Chart = nil then
     Exit;
   FRM.CW.BeginUpdate;
   try
@@ -1111,11 +1107,14 @@ begin
     if Frm.lbxPieOptions.Checked[6] then Opt := Opt +  [poPinText];
     if Frm.lbxPieOptions.Checked[7] then Opt := Opt +  [poClientBorder];
     G.Options := Opt;
-    Anim := G.Animation;
-    G.Animation := Frm.cbxPieAnimation.Checked;
-    G.AnimationSpeed := TAnimationSpeed(Frm.cbPieAnimationSpeed.ItemIndex);
-    G.AnimationPause :=  StrToInt(Frm.ePieAnimationPause.Text);
-    if not Anim and G.Animation then
+    Anim := G.AnimationDef.Active;
+    if Frm.cbxPieAnimation.Checked then
+     G.AnimationDef.ProgressTypes := [anFlow]
+    else
+     G.AnimationDef.ProgressTypes := [];
+    G.AnimationDef.Duration := Frm.sePieAnimDuration.Value;
+    G.AnimationDef.Pause :=  StrToInt(Frm.ePieAnimationPause.Text);
+    if not Anim and G.AnimationDef.Active then
     begin
       Frm.CW.SetFocus; {To prevent spacebar press affecting the checkbox}
       Frm.CW.RefreshChart;
@@ -1147,13 +1146,22 @@ begin
 
 procedure TForm_main.ChartChange(Sender : TObject);
 begin
+   if CW.Chart = nil then
+   begin
+     frm_ChartList.lbCharts.ItemIndex := -1;
+     FGraph1 := nil;
+     FGraph2 := nil;
+     SetVisibleTabs;
+     //OnLoadChart;
+     Exit;
+   end;
    if CW.ChartList.IndexOf(CW.Chart, nil) = -1 then
    begin
        CW.ChartList.Add(CW.Chart);
        FillChartList;
        OnLoadChart;
    end;
-   lbCharts.ItemIndex := CW.ChartList.ItemIndex;
+   frm_ChartList.lbCharts.ItemIndex := CW.ChartList.ItemIndex;
    if not (CW.Chart is TCWPieChart) then
    begin
     if not (CW.ValueScale1.ValueSpanFromData) then
@@ -1212,6 +1220,14 @@ begin
   if CW.OverflowError then
   begin
     sb.SimpleText := '  Overflow error';
+    Exit;
+  end;
+  if CW.IsAnimating then
+  begin
+    if CW.IsAnimationSuspended then
+     sb.SimpleText := '  Click mouse to start/resume animation'
+    else
+     sb.SimpleText := '  Animating';
     Exit;
   end;
   if CW.IsAxisChart then
@@ -1341,20 +1357,23 @@ end;
 procedure Tform_main.acApplyBarAnimUpdate(Sender: TObject);
 var
  Enabl : Boolean;
- AN : TAnimations;
+ AN : TProgressTypes;
+ B : TCWBar;
 begin
     Enabl := (Selgraph is TCWBar);
     if Enabl then
     begin
      if eBarAnimationPause.Text = '' then
       Enabl := false
+     else if CW.CanAnimate <> AN_OK then
+      Enabl := false
      else
      begin
       An := [];
       if lbxBarAnimations.Checked[0] then An := AN + [anFlow];
       if lbxBarAnimations.Checked[1] then An := AN + [anGrow];
-
-      Enabl := (AN <> []) or ((AN = []) and (TCWBar(SelGraph).Animations <> AN));
+      B := TCWBar(Selgraph);
+      Enabl := (AN <> []) or ((AN = []) and (B.AnimationDef.ProgressTypes <> AN));
      end;
 
     end;
@@ -1374,6 +1393,7 @@ var
   LW : integer;
   LS: TCurveLineStyle;
   St : TCurveStyle;
+  Bs : single;
   N : integer;
 begin
    if (SelGraph <> nil) and (SelGraph is TCWCurve) then
@@ -1384,10 +1404,19 @@ begin
           acApply.Enabled := false;
           Exit;
         end;
+        if Trim(eCurveBaseline.Text) = '' then
+          eCurveBaseline.Text := '0';
+        if not TryStrToFloat(eCurveBaseline.Text, Bs) then
+        begin
+          acApply.Enabled := false;
+          Exit;
+        end;
+
 
         LW := StrToInt(eLineWidth.Text);
         LS := TCurveLineStyle(cbLineStyle.ItemIndex);
         St := TCurveStyle(cbCurveStyle.ItemIndex);
+        Bs := StrToFloat(eCurveBaseline.Text);
 
         if (lbApplyOn.ItemIndex = 0) or (FCurveControls.FStyleIndex = -1) then
         begin
@@ -1395,7 +1424,8 @@ begin
           if not Enabl then
           Enabl := (LS <> LineStyle)
               or (LW <> LineWidth)
-              or (St <> Style);
+              or (St <> Style)
+              or (BS <> BaselineValue);
         end
         else
         begin
@@ -1410,13 +1440,15 @@ begin
            begin
              Enabl := (SeriesStyles.Items[Indx].LineStyle <> LS)
              or (SeriesStyles.Items[Indx].LineWidth <> LW)
-             or (SeriesStyles.Items[Indx].Style <> St);
+             or (SeriesStyles.Items[Indx].Style <> St)
+             or (SeriesStyles.Items[Indx].BaselineValue <> Bs);
            end
            else
            begin
               Enabl := (LS <> LineStyle)
               or (LW <> LineWidth)
-              or (St <> Style);
+              or (St <> Style)
+              or (Bs <> BaselineValue);
            end;
         end;
 
@@ -1424,6 +1456,11 @@ begin
     end
     else
      acApply.Enabled := false;
+end;
+
+procedure Tform_main.acChartListExecute(Sender: TObject);
+begin
+   frm_ChartList.Show;
 end;
 
 procedure Tform_main.acChartTitleFontAccept(Sender: TObject);
@@ -1435,6 +1472,19 @@ end;
 procedure Tform_main.acChartTitleFontBeforeExecute(Sender: TObject);
 begin
    acChartTitleFont.Dialog.Font.Assign(CW.TitleFont);
+end;
+
+procedure Tform_main.acCloseExecute(Sender: TObject);
+begin
+  CW.Chart := nil;
+  ResetGenerals;
+  pgChartDefs.ActivePageIndex := 0;
+  SetStates;
+end;
+
+procedure Tform_main.acCloseUpdate(Sender: TObject);
+begin
+  acClose.Enabled := CW.Chart <> nil;
 end;
 
 procedure Tform_main.acContractExecute(Sender: TObject);
@@ -1470,6 +1520,8 @@ end;
 procedure Tform_main.acDashbordExecute(Sender: TObject);
 begin
   panChart.Visible := not PanChart.Visible;
+  if CW.Chart <> nil then
+    FActiveGraphControls.DoFill;
 end;
 
 procedure Tform_main.acDeleteCategoryExecute(Sender: TObject);
@@ -1661,6 +1713,7 @@ begin
   eLowValue.Enabled := eHighValue.Enabled;
   gbBarAnimation.Enabled := (Cw.Chart <> nil) and (CW.Chart.AxisCount = 1);
   cbxCurveAnimation.Enabled := gbBarAnimation.Enabled;
+  pgChartDefs.Enabled := CW.Chart <> nil;
 end;
 
 procedure Tform_main.acUnzoomExecute(Sender: TObject);
@@ -2113,7 +2166,7 @@ end;
 
 procedure Tform_main.FileOpen1Accept(Sender: TObject);
 begin
-  CW.LoadFromFile(FileOpen1.Dialog.FileName, True);
+  CW.LoadFromFile(FileOpen1.Dialog.FileName);
   //CW.ChartList.Add(CW.Chart);
   //FillChartList;
   //OnLoadChart;
@@ -2124,6 +2177,11 @@ begin
     CW.SaveToFile(FileSaveAs1.Dialog.FileName, sfRich, ttUnix);
 end;
 
+procedure Tform_main.FileSaveAs1BeforeExecute(Sender: TObject);
+begin
+    FileSaveas1.Dialog.FileName := CW.Chart.FileName;
+end;
+
 procedure Tform_main.FileSaveAs1Update(Sender: TObject);
 begin
     FileSaveAs1.Enabled := CW.Chart <> nil;
@@ -2131,17 +2189,16 @@ end;
 
 procedure Tform_main.FormCreate(Sender: TObject);
 begin
-//
    FCurveControls := TCurveControls.Create(nil, Self);
    FBarControls := TBarControls.Create(nil, Self);
    FPieControls := TPieControls.Create(nil, Self);
    CW.ChartList.OnChange := ChartChange;
    CW.BezierMargin := 30;
+   //CW.Chart := Chart_CO2;
 end;
 
 procedure Tform_main.FormDestroy(Sender: TObject);
 begin
-//
   FCurveControls.Free;
   FBarControls.Free;
   FPieControls.Free;
@@ -2150,6 +2207,7 @@ end;
 function Tform_main.FormHelp(Command: Word; Data: NativeInt;
   var CallHelp: Boolean): Boolean;
 begin
+   Result := True;
    CallHelp := True;
 end;
 
@@ -2157,12 +2215,6 @@ procedure Tform_main.lbApplyOnClick(Sender: TObject);
 begin
     FCurveControls.FStyleIndex := lbApplyOn.ItemIndex-1;
     FCurveControls.SyncSeriesStyles;
-end;
-
-procedure Tform_main.lbChartsClick(Sender: TObject);
-begin
-   CW.ChartList.ItemIndex := lbCharts.ItemIndex;
-   OnLoadChart;
 end;
 
 procedure Tform_main.lbItemsClick(Sender: TObject);
@@ -2297,12 +2349,19 @@ var
  CL : TChartList;
 begin
    CL := CW.ChartList;
-   lbCharts.Clear;
+   frm_ChartList.lbCharts.Clear;
    for I := 0 to cl.Count-1 do
      begin
-       lbCharts.Items.AddObject(cl.Items[i].Title, cl.Items[i])
+       frm_ChartList.lbCharts.Items.AddObject(cl.Items[i].Title, cl.Items[i])
      end;
-     lbCharts.ItemIndex := CW.ChartList.ItemIndex;
+     frm_ChartList.lbCharts.ItemIndex := CW.ChartList.ItemIndex;
+end;
+
+procedure TForm_main.ResetGenerals;
+begin
+  eChartTitle.Text := '';
+  cbTitleAlignment.ItemIndex := -1;
+  cbBGColor.Selected := clWindow;
 end;
 
 function TForm_main.SelGraph : TCWGraph;
@@ -2339,7 +2398,7 @@ begin
   end
   else
   begin
-    lbCharts.Clear;
+    frm_ChartList.lbCharts.Clear;
     eChartTitle.Text := '';
     cbBgColor.Selected := clWindow;
     cbBorders.ItemIndex := 0;
@@ -2722,6 +2781,12 @@ begin
      CW.WallColor := cbWallColor.Selected;
 end;
 
+procedure Tform_main.cbxCurveAnimSplitClick(Sender: TObject);
+begin
+  if (CW.Chart <> nil) and (Selgraph <> nil) then
+    SelGraph.AnimationDef.SplitDuration := TCheckBox(Sender).Checked;
+end;
+
 procedure Tform_main.cbxAntiAliasingClick(Sender: TObject);
 begin
   FCurveControls.Update(Sender);
@@ -2753,10 +2818,18 @@ begin
 end;
 
 procedure Tform_main.cbxCurveAnimationClick(Sender: TObject);
+var
+ C : TCWCurve;
 begin
-   TCWCurve(SelGraph).Animation := cbxCurveAnimation.Checked;
-   if TCWCurve(SelGraph).Animation then
-    if CW.Chart.PerformAnimation <> AN_OK then
+   if Selgraph = nil then
+     Exit;
+   C := TCWCurve(SelGraph);
+   if cbxCurveAnimation.Checked then
+     C.AnimationDef.ProgressTypes := [anFlow]
+   else
+     C.AnimationDef.ProgressTypes := [];
+   if C.AnimationDef.Active then
+    if CW.PerformAnimation <> AN_OK then
       raise Exception.Create('Failed');
 end;
 
@@ -2797,10 +2870,17 @@ begin
 end;
 
 procedure Tform_main.cbxPieAnimationClick(Sender: TObject);
+var
+  P : TCWPie;
 begin
-   TCWPie(SelGraph).Animation := cbxPieAnimation.Checked;
-   if TCWPie(SelGraph).Animation then
-    if CW.Chart.PerformAnimation <> AN_OK then
+   P := TCWPie(SelGraph);
+
+   if cbxPieAnimation.Checked then
+    P.AnimationDef.ProgressTypes := [anFlow]
+   else
+    P.AnimationDef.ProgressTypes := [];
+   if P.AnimationDef.Active then
+    if CW.PerformAnimation <> AN_OK then
       raise Exception.Create('Failed');
 end;
 
@@ -2822,6 +2902,11 @@ begin
    end;
 end;
 
+procedure Tform_main.CWEndAnimation(Sender: TObject);
+begin
+  SetStates;
+end;
+
 procedure Tform_main.CWQuerySpace(Sender: TObject; const QueryResult: Integer;
   var Response: TSpaceResponse);
 begin
@@ -2836,6 +2921,16 @@ begin
     Response := srAccept;
 end;
 
+procedure Tform_main.CWStartAnimation(Sender: TObject);
+begin
+  SetStates;
+end;
+
+procedure Tform_main.CWSuspendAnimation(Sender: TObject);
+begin
+  SetStates;
+end;
+
 function TForm_main.DisableCBXEvent(ACBX : TObject) : TNotifyEvent;
 begin
   if ACBX is TCheckBox then
@@ -2845,8 +2940,8 @@ begin
   end
   else
   begin
-    Result := TCheckListBox(ACBX).OnClickCheck;
-    TCheckListBox(ACBX).OnClickCheck := nil;
+    Result := TSpinEdit(ACBX).OnChange;
+    TSpinedit(ACBX).OnChange := nil;
   end;
 end;
 
@@ -2924,6 +3019,10 @@ begin
   if lbItems.Count > 0 then
     lbItems.ItemIndex := 0;
   FActiveGraphControls.DoFill;
+  if FGraph2 is TCWCurve then
+    FCurveControls.DoFill
+  else if FGraph2 is TCWBar then
+    FBarControls.DoFill;
   SetVisibleTabs;
   if FGraph1 is TCWCurve then
    pgGraphs.ActivePage := Curve
@@ -2977,7 +3076,6 @@ begin
   tabChartGeneral.TabVisible := false;
   tabNameSections.TabVisible := False;
   tabValueSections.TabVisible := False;
-  //tabLegends.TabVisible := false;
 
   if CW.Chart.Legends.Count > 0 then
    tabLegends.TabVisible := True;
@@ -3039,10 +3137,21 @@ begin
   SetPenProps(CW.NameScale.Pen);
 end;
 
+procedure Tform_main.seAnimDurationExit(Sender: TObject);
+begin
+   FActiveGraphControls.Update(Sender);
+end;
+
 procedure Tform_main.eChartTitleExit(Sender: TObject);
 begin
    if CW.Chart <> nil then
      CW.Chart.Title := eChartTitle.Text;
+end;
+
+procedure Tform_main.eCurveAnimationPauseExit(Sender: TObject);
+begin
+  if (CW.Chart <> nil) and (SelGraph <> nil) then
+     Selgraph.AnimationDef.Pause := StrToInt(eCurveAnimationPause.Text);
 end;
 
 procedure Tform_main.eGMargBottomExit(Sender: TObject);
@@ -3079,7 +3188,7 @@ begin
     try
      VScale.ValueHigh := StrToFloat(TEdit(Sender).Text);
     except
-      TEdit(Sender).Text := FloatToStr(VScale.ValueHigh);
+      TEdit(Sender).Text := FormatNum(VScale.ValueHigh,VScale.ValuePrecision);
       raise;
     end;
    end;
@@ -3160,7 +3269,7 @@ begin
     try
      VScale.ValueLow := StrToFloat(TEdit(Sender).Text);
     except
-      TEdit(Sender).Text := FloatToStr(VScale.ValueLow);
+      TEdit(Sender).Text := FormatNum(VScale.ValueLow, VScale.ValuePrecision);
       raise;
     end;
    end;
@@ -3195,8 +3304,6 @@ begin
 end;
 
 procedure Tform_main.eSMAPeriodsExit(Sender: TObject);
-var
-  N : integer;
 begin
   if eSMAPeriods.Text = '' then
     Exit;
@@ -3236,11 +3343,11 @@ begin
     try
      VScale.ValueIntervals := StrToFloat(TEdit(Sender).Text);
     except
-      TEdit(Sender).Text := FloatToStr(VScale.ValueIntervals);
+      TEdit(Sender).Text := FormatNum(VScale.ValueIntervals, VScale.ValuePrecision);
       raise;
     end;
    end;
-   TEdit(Sender).Text := FloatToStr(VScale.ValueIntervals);
+   TEdit(Sender).Text := FormatNum(VScale.ValueIntervals, VScale.ValuePrecision);
 end;
 
 procedure Tform_main.eWallWidthExit(Sender: TObject);

@@ -120,6 +120,11 @@
             <Form>frm_New</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="form_ChartList.pas">
+            <Form>frm_ChartList</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <None Include="CWDemo.todo"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -153,6 +158,12 @@
                 <DeployFile LocalName="Win32\Debug\CWDemo.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>CWDemo.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="CWDemo.todo" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win32">
+                        <RemoteDir>.\</RemoteDir>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

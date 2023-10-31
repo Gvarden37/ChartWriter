@@ -97,6 +97,19 @@ object form_main: Tform_main
       Top = 0
       Action = acReload
     end
+    object ToolButton13: TToolButton
+      Left = 223
+      Top = 0
+      Width = 8
+      Caption = 'ToolButton13'
+      ImageIndex = 12
+      Style = tbsSeparator
+    end
+    object ToolButton12: TToolButton
+      Left = 231
+      Top = 0
+      Action = acChartList
+    end
   end
   object panChart: TPanel
     Left = 0
@@ -132,84 +145,56 @@ object form_main: Tform_main
       ShowHint = True
       TabOrder = 0
       Visible = False
+      OnExit = seAnimDurationExit
       object Curve: TTabSheet
         Caption = 'Curve'
-        object lbCurveAnimationSpeed: TLabel
-          Left = 209
-          Top = 173
-          Width = 79
-          Height = 13
-          Caption = 'Animation speed'
-        end
         object Label50: TLabel
           Left = 2
-          Top = 243
+          Top = 273
           Width = 86
           Height = 13
           Caption = 'Min. point spacing'
         end
         object Label51: TLabel
           Left = 2
-          Top = 268
+          Top = 298
           Width = 90
           Height = 13
           Caption = 'Max. point spacing'
         end
         object Label53: TLabel
           Left = 2
-          Top = 318
+          Top = 348
           Width = 65
           Height = 13
           Caption = 'Point markers'
         end
         object sbFont: TSpeedButton
-          Left = -16
-          Top = 119
+          Left = 1
+          Top = 367
           Width = 79
           Height = 22
           Action = acCurveFont
         end
         object lbCurveFontName: TLabel
           Left = 96
-          Top = 343
+          Top = 373
           Width = 47
           Height = 13
           Caption = 'Tahoma 8'
         end
-        object Label56: TLabel
-          Left = 209
-          Top = 200
-          Width = 79
-          Height = 13
-          Caption = 'Animation pause'
-        end
-        object Label43: TLabel
-          Left = 358
-          Top = 200
-          Width = 32
-          Height = 13
-          Caption = 'm.sec.'
-        end
-        object Label105: TLabel
-          Left = 209
-          Top = 224
-          Width = 150
-          Height = 26
-          Caption = '-1 = Manual stop.  Click mouse to resume'
-          WordWrap = True
-        end
         object Label108: TLabel
           Left = 3
-          Top = 219
+          Top = 249
           Width = 51
           Height = 13
           Caption = 'Line shape'
         end
         object gbCurveStyles: TGroupBox
-          Left = 2
+          Left = 3
           Top = 3
           Width = 199
-          Height = 210
+          Height = 236
           Caption = 'Curve styles'
           Color = clCream
           ParentBackground = False
@@ -231,7 +216,7 @@ object form_main: Tform_main
           end
           object lbLineWidth: TLabel
             Left = 4
-            Top = 151
+            Top = 176
             Width = 48
             Height = 13
             Caption = 'Line width'
@@ -249,18 +234,13 @@ object form_main: Tform_main
             Font.Style = []
             ParentFont = False
           end
-          object sbApplyOnAll: TSpeedButton
-            Left = 54
-            Top = 177
-            Width = 136
-            Height = 22
-            Action = acApply
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clBlue
-            Font.Height = -11
-            Font.Name = 'Tahoma'
-            Font.Style = []
-            ParentFont = False
+          object Label49: TLabel
+            Left = 4
+            Top = 144
+            Width = 45
+            Height = 26
+            Caption = 'Base line value'
+            WordWrap = True
           end
           object cbCurveStyle: TComboBox
             Left = 56
@@ -296,14 +276,14 @@ object form_main: Tform_main
               'Dash')
           end
           object eLineWidth: TEdit
-            Left = 55
-            Top = 148
+            Left = 56
+            Top = 173
             Width = 25
             Height = 21
             HelpContext = 295
             MaxLength = 1
             NumbersOnly = True
-            TabOrder = 3
+            TabOrder = 4
             Text = '1'
           end
           object lbApplyOn: TListBox
@@ -317,39 +297,33 @@ object form_main: Tform_main
             TabOrder = 0
             OnClick = lbApplyOnClick
           end
-        end
-        object cbxCurveAnimation: TCheckBox
-          Left = 209
-          Top = 146
-          Width = 97
-          Height = 17
-          Hint = 'Run animation'
-          HelpContext = 427
-          Alignment = taLeftJustify
-          Caption = 'Animation'
-          TabOrder = 8
-          OnClick = cbxCurveAnimationClick
-        end
-        object cbCurveAnimationSpeed: TComboBox
-          Left = 294
-          Top = 170
-          Width = 100
-          Height = 21
-          HelpContext = 331
-          Style = csDropDownList
-          ItemIndex = 1
-          TabOrder = 9
-          Text = 'Medium fast'
-          OnChange = cbCurvePointMarkersChange
-          Items.Strings = (
-            'Fast'
-            'Medium fast'
-            'Medium slow'
-            'Slow')
+          object sbApplyOnAll: TButton
+            Left = 44
+            Top = 202
+            Width = 105
+            Height = 21
+            Action = acApply
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clBlue
+            Font.Height = -11
+            Font.Name = 'Tahoma'
+            Font.Style = []
+            ParentFont = False
+            TabOrder = 5
+          end
+          object eCurveBaseLine: TEdit
+            Left = 56
+            Top = 148
+            Width = 65
+            Height = 21
+            Hint = 'Value that defines the base line split'
+            HelpContext = 16
+            TabOrder = 3
+          end
         end
         object eCurveMinPointSpacing: TEdit
           Left = 95
-          Top = 240
+          Top = 270
           Width = 65
           Height = 21
           Hint = 'Minimum space in pixels between the  points. 0 = compressed'
@@ -359,7 +333,7 @@ object form_main: Tform_main
         end
         object eCurveMaxPointSpacing: TEdit
           Left = 95
-          Top = 265
+          Top = 295
           Width = 65
           Height = 21
           Hint = 'Max space in pixels between the points. 0 = no limit'
@@ -369,7 +343,7 @@ object form_main: Tform_main
         end
         object cbxCurveBeaconPoints: TCheckBox
           Left = 2
-          Top = 292
+          Top = 322
           Width = 106
           Height = 17
           Hint = 'Displays a rolling point parker, following the mouse'
@@ -381,7 +355,7 @@ object form_main: Tform_main
         end
         object cbCurvePointMarkers: TComboBox
           Left = 95
-          Top = 315
+          Top = 346
           Width = 123
           Height = 22
           Hint = 'Images or text that marks up the points'
@@ -406,32 +380,13 @@ object form_main: Tform_main
             'Dot'
             'Text')
         end
-        object eCurveAnimationPause: TEdit
-          Left = 294
-          Top = 197
-          Width = 57
-          Height = 21
-          Hint = 
-            'Pauses animation between each series. -1 = manual pause. Mouse c' +
-            'lick resumes.'
-          HelpContext = 340
-          TabOrder = 10
-        end
         object GroupBox1: TGroupBox
           Left = 207
           Top = 3
           Width = 200
-          Height = 137
+          Height = 118
           Caption = 'Area  styles options'
-          TabOrder = 7
-          object Label49: TLabel
-            Left = 7
-            Top = 106
-            Width = 71
-            Height = 13
-            Caption = 'Base line value'
-            WordWrap = True
-          end
+          TabOrder = 6
           object Label54: TLabel
             Left = 7
             Top = 22
@@ -446,16 +401,6 @@ object form_main: Tform_main
             Height = 26
             Caption = 'Area outline color'
             WordWrap = True
-          end
-          object eCurveBaseLine: TEdit
-            Left = 85
-            Top = 103
-            Width = 65
-            Height = 21
-            Hint = 'Value that defines the base line split'
-            HelpContext = 16
-            TabOrder = 3
-            OnExit = cbCurvePointMarkersChange
           end
           object cbNeighborAreaColor: TColorBox
             Left = 85
@@ -492,19 +437,19 @@ object form_main: Tform_main
           end
         end
         object cbxCurveKeepFontColor: TCheckBox
-          Left = 2
-          Top = 360
+          Left = 207
+          Top = 297
           Width = 108
           Height = 17
           Hint = 'Overrides font color adaption, keeping the color of Text font.'
           Alignment = taLeftJustify
           Caption = 'Keep font color'
-          TabOrder = 6
+          TabOrder = 8
           OnClick = cbxCurveKeepFontColorClick
         end
         object cbLineShape: TComboBox
           Left = 94
-          Top = 215
+          Top = 245
           Width = 66
           Height = 22
           Hint = 'Shape of line'
@@ -526,14 +471,106 @@ object form_main: Tform_main
             'Step')
         end
         object cbxAntiAliasing: TCheckBox
-          Left = 207
-          Top = 256
-          Width = 101
+          Left = 208
+          Top = 320
+          Width = 107
           Height = 17
           Alignment = taLeftJustify
           Caption = 'Anti aliasing'
-          TabOrder = 11
+          TabOrder = 9
           OnClick = cbxAntiAliasingClick
+        end
+        object GroupBox7: TGroupBox
+          Left = 207
+          Top = 127
+          Width = 200
+          Height = 164
+          Caption = 'Animation'
+          TabOrder = 7
+          object Label56: TLabel
+            Left = 7
+            Top = 94
+            Width = 29
+            Height = 13
+            Caption = 'Pause'
+          end
+          object Label43: TLabel
+            Left = 141
+            Top = 94
+            Width = 32
+            Height = 13
+            Caption = 'm.sec.'
+          end
+          object Label105: TLabel
+            Left = 7
+            Top = 118
+            Width = 150
+            Height = 26
+            Caption = '-1 = Manual stop.  Click mouse to resume'
+            WordWrap = True
+          end
+          object Label113: TLabel
+            Left = 7
+            Top = 46
+            Width = 41
+            Height = 13
+            Caption = 'Duration'
+          end
+          object Label72: TLabel
+            Left = 153
+            Top = 48
+            Width = 32
+            Height = 13
+            Caption = 'm.sec.'
+          end
+          object cbxCurveAnimation: TCheckBox
+            Left = 7
+            Top = 23
+            Width = 82
+            Height = 17
+            Hint = 'Run animation'
+            HelpContext = 427
+            Alignment = taLeftJustify
+            Caption = 'Active'
+            TabOrder = 0
+            OnClick = cbxCurveAnimationClick
+          end
+          object eCurveAnimationPause: TEdit
+            Left = 77
+            Top = 91
+            Width = 58
+            Height = 21
+            Hint = 
+              'Pauses animation between each series. -1 = manual pause. Mouse c' +
+              'lick resumes.'
+            HelpContext = 340
+            TabOrder = 3
+            OnExit = eCurveAnimationPauseExit
+          end
+          object seAnimDuration: TSpinEdit
+            Left = 77
+            Top = 43
+            Width = 71
+            Height = 22
+            HelpContext = 331
+            Increment = 1000
+            MaxLength = 4
+            MaxValue = 10000
+            MinValue = 100
+            TabOrder = 1
+            Value = 3000
+            OnExit = seAnimDurationExit
+          end
+          object cbxCurveAnimSplit: TCheckBox
+            Left = 7
+            Top = 68
+            Width = 83
+            Height = 17
+            Alignment = taLeftJustify
+            Caption = 'Split duration'
+            TabOrder = 2
+            OnClick = cbxCurveAnimSplitClick
+          end
         end
       end
       object Bar: TTabSheet
@@ -541,10 +578,6 @@ object form_main: Tform_main
         ImageIndex = 1
         ParentShowHint = False
         ShowHint = True
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object Label58: TLabel
           Left = 6
           Top = 8
@@ -780,9 +813,9 @@ object form_main: Tform_main
           end
         end
         object gbBarAnimation: TGroupBox
-          Left = 210
-          Top = 33
-          Width = 187
+          Left = 213
+          Top = 32
+          Width = 197
           Height = 200
           Caption = 'Animation'
           Color = clCream
@@ -792,79 +825,50 @@ object form_main: Tform_main
           object lbBarAnimationSpeed: TLabel
             Left = 7
             Top = 57
-            Width = 30
+            Width = 41
             Height = 13
-            Caption = 'Speed'
+            Caption = 'Duration'
           end
           object Label70: TLabel
             Left = 8
-            Top = 108
+            Top = 107
             Width = 29
             Height = 13
             Caption = 'Pause'
           end
-          object Label72: TLabel
-            Left = 8
-            Top = 81
-            Width = 37
-            Height = 13
-            Caption = 'Booster'
-          end
-          object sbBarAnimationApply: TSpeedButton
-            Left = 70
-            Top = 165
-            Width = 65
-            Height = 22
-            Action = acApplyBarAnim
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clBlue
-            Font.Height = -11
-            Font.Name = 'Tahoma'
-            Font.Style = []
-            ParentFont = False
-          end
           object Label64: TLabel
             Left = 7
             Top = 17
-            Width = 61
+            Width = 25
             Height = 13
-            Caption = 'Performance'
+            Caption = 'Kinds'
           end
           object Label103: TLabel
-            Left = 142
-            Top = 108
+            Left = 143
+            Top = 107
             Width = 35
             Height = 13
             Caption = 'm. sec.'
           end
           object Label104: TLabel
             Left = 8
-            Top = 132
+            Top = 131
             Width = 150
             Height = 26
             Caption = '-1 = Manual stop.  Click mouse to resume'
             WordWrap = True
           end
-          object cbBarAnimationSpeed: TComboBox
-            Left = 79
-            Top = 54
-            Width = 100
-            Height = 21
-            HelpContext = 331
-            Style = csDropDownList
-            ItemIndex = 1
-            TabOrder = 2
-            Text = 'Medium fast'
-            Items.Strings = (
-              'Fast'
-              'Medium fast'
-              'Medium slow'
-              'Slow')
+          object Label69: TLabel
+            Left = 155
+            Top = 56
+            Width = 35
+            Height = 13
+            Caption = 'm. sec.'
           end
           object eBarAnimationPause: TEdit
-            Left = 77
-            Top = 105
-            Width = 57
+            Left = 79
+            Top = 104
+            Width = 58
             Height = 21
             Hint = 
               'Pauses animation between each series. -1 = manual pause. Mouse c' +
@@ -879,25 +883,46 @@ object form_main: Tform_main
             Width = 100
             Height = 35
             HelpContext = 310
+            OnClickCheck = seAnimDurationExit
             ItemHeight = 13
             Items.Strings = (
               'Flow'
               'Grow')
             TabOrder = 0
           end
-          object seAnimationBooster: TSpinEdit
-            Left = 80
-            Top = 77
-            Width = 49
+          object seBarAnimDuration: TSpinEdit
+            Left = 79
+            Top = 55
+            Width = 73
             Height = 22
-            Hint = 
-              'Adds extra speed. Range from -5 to 5 (negative values slows down' +
-              ')'
-            HelpContext = 319
-            MaxValue = 5
-            MinValue = -5
+            HelpContext = 538
+            Increment = 1000
+            MaxLength = 5
+            MaxValue = 20000
+            MinValue = 100
             TabOrder = 1
-            Value = 0
+            Value = 3000
+            OnExit = seAnimDurationExit
+          end
+          object cbxBarSplitDuration: TCheckBox
+            Left = 7
+            Top = 81
+            Width = 87
+            Height = 17
+            Hint = 'Apply duration on individual graph elements'
+            HelpContext = 539
+            Alignment = taLeftJustify
+            Caption = 'Split duration'
+            TabOrder = 2
+            OnClick = cbxCurveAnimSplitClick
+          end
+          object sbBarAnimationApply: TButton
+            Left = 62
+            Top = 163
+            Width = 75
+            Height = 23
+            Action = acApplyBarAnim
+            TabOrder = 4
           end
         end
         object GroupBox3: TGroupBox
@@ -910,8 +935,8 @@ object form_main: Tform_main
           object Label47: TLabel
             Left = 2
             Top = 15
-            Width = 181
-            Height = 52
+            Width = 183
+            Height = 65
             Align = alClient
             Alignment = taCenter
             Caption = 
@@ -919,6 +944,8 @@ object form_main: Tform_main
               'e styles cannot be effected if space is to small.'
             Layout = tlCenter
             WordWrap = True
+            ExplicitWidth = 181
+            ExplicitHeight = 52
           end
         end
         object cbxAutoSize: TCheckBox
@@ -963,10 +990,6 @@ object form_main: Tform_main
         ImageIndex = 2
         ParentShowHint = False
         ShowHint = True
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object Label12: TLabel
           Left = 3
           Top = 199
@@ -981,36 +1004,22 @@ object form_main: Tform_main
           Height = 13
           Caption = 'Style'
         end
-        object Label69: TLabel
-          Left = 229
-          Top = 243
-          Width = 79
-          Height = 13
-          Caption = 'Animation speed'
-        end
-        object Label71: TLabel
-          Left = 229
-          Top = 270
-          Width = 79
-          Height = 13
-          Caption = 'Animation pause'
-        end
         object SpeedButton1: TSpeedButton
-          Left = 229
+          Left = 222
           Top = 139
           Width = 71
           Height = 22
           Action = acCurveFont
         end
         object lbPieFont: TLabel
-          Left = 312
+          Left = 305
           Top = 142
           Width = 47
           Height = 13
           Caption = 'Tahoma 8'
         end
         object Label74: TLabel
-          Left = 233
+          Left = 226
           Top = 2
           Width = 37
           Height = 13
@@ -1052,7 +1061,7 @@ object form_main: Tform_main
           Caption = 'Slice spacing'
         end
         object SpeedButton3: TSpeedButton
-          Left = 229
+          Left = 222
           Top = 187
           Width = 97
           Height = 22
@@ -1060,7 +1069,7 @@ object form_main: Tform_main
           Caption = 'Series title font ...'
         end
         object lbPieTitleFont: TLabel
-          Left = 332
+          Left = 325
           Top = 191
           Width = 47
           Height = 13
@@ -1116,21 +1125,6 @@ object form_main: Tform_main
           Caption = 'Pixels or % (neg. values)'
           WordWrap = True
         end
-        object Label88: TLabel
-          Left = 371
-          Top = 270
-          Width = 28
-          Height = 13
-          Caption = 'm.sec'
-        end
-        object Label89: TLabel
-          Left = 228
-          Top = 294
-          Width = 150
-          Height = 26
-          Caption = '-1 = Manual stop.  Click mouse to resume'
-          WordWrap = True
-        end
         object eValuePrecision: TEdit
           Left = 77
           Top = 196
@@ -1158,49 +1152,8 @@ object form_main: Tform_main
             'Flat'
             '3D Disc')
         end
-        object cbxPieAnimation: TCheckBox
-          Left = 229
-          Top = 217
-          Width = 97
-          Height = 17
-          Hint = 'Starts animation'
-          HelpContext = 427
-          Alignment = taLeftJustify
-          Caption = 'Animation'
-          TabOrder = 10
-          OnClick = cbxPieAnimationClick
-        end
-        object cbPieAnimationSpeed: TComboBox
-          Left = 314
-          Top = 240
-          Width = 83
-          Height = 21
-          HelpContext = 331
-          Style = csDropDownList
-          ItemIndex = 1
-          TabOrder = 11
-          Text = 'Medium fast'
-          OnChange = cbPieStyleChange
-          Items.Strings = (
-            'Fast'
-            'Medium fast'
-            'Medium slow'
-            'Slow')
-        end
-        object ePieAnimationPause: TEdit
-          Left = 314
-          Top = 267
-          Width = 51
-          Height = 21
-          Hint = 
-            'Delay between each slice paint in milliseconds. -1 = Manual stop' +
-            '/resume'
-          HelpContext = 340
-          TabOrder = 12
-          OnExit = cbPieStyleChange
-        end
         object lbxPieOptions: TCheckListBox
-          Left = 229
+          Left = 222
           Top = 20
           Width = 136
           Height = 113
@@ -1285,7 +1238,7 @@ object form_main: Tform_main
           OnExit = cbPieStyleChange
         end
         object cbxPieKeepFontColor: TCheckBox
-          Left = 229
+          Left = 222
           Top = 164
           Width = 97
           Height = 17
@@ -1296,14 +1249,101 @@ object form_main: Tform_main
           TabOrder = 9
           OnClick = cbxCurveKeepFontColorClick
         end
+        object GroupBox6: TGroupBox
+          Left = 222
+          Top = 215
+          Width = 179
+          Height = 168
+          Caption = 'Animation'
+          TabOrder = 10
+          object Label71: TLabel
+            Left = 6
+            Top = 96
+            Width = 29
+            Height = 13
+            Caption = 'Pause'
+          end
+          object Label88: TLabel
+            Left = 135
+            Top = 97
+            Width = 28
+            Height = 13
+            Caption = 'm.sec'
+          end
+          object Label89: TLabel
+            Left = 6
+            Top = 120
+            Width = 150
+            Height = 26
+            Caption = '-1 = Manual stop.  Click mouse to resume'
+            WordWrap = True
+          end
+          object Label114: TLabel
+            Left = 6
+            Top = 45
+            Width = 41
+            Height = 13
+            Caption = 'Duration'
+          end
+          object Label115: TLabel
+            Left = 143
+            Top = 45
+            Width = 32
+            Height = 13
+            Caption = 'm.sec.'
+          end
+          object cbxPieAnimation: TCheckBox
+            Left = 6
+            Top = 19
+            Width = 81
+            Height = 17
+            Hint = 'Starts animation'
+            HelpContext = 427
+            Alignment = taLeftJustify
+            Caption = 'Active'
+            TabOrder = 0
+            OnClick = cbxPieAnimationClick
+          end
+          object ePieAnimationPause: TEdit
+            Left = 75
+            Top = 93
+            Width = 51
+            Height = 21
+            Hint = 
+              'Delay between each slice paint in milliseconds. -1 = Manual stop' +
+              '/resume'
+            HelpContext = 340
+            TabOrder = 1
+            OnExit = cbPieStyleChange
+          end
+          object sePieAnimDuration: TSpinEdit
+            Left = 75
+            Top = 42
+            Width = 62
+            Height = 22
+            Increment = 1000
+            MaxLength = 4
+            MaxValue = 10000
+            MinValue = 100
+            TabOrder = 3
+            Value = 3000
+            OnExit = seAnimDurationExit
+          end
+          object cbxPieSplitDuration: TCheckBox
+            Left = 6
+            Top = 71
+            Width = 83
+            Height = 17
+            Alignment = taLeftJustify
+            Caption = 'Split duration'
+            TabOrder = 2
+            OnClick = cbxCurveAnimSplitClick
+          end
+        end
       end
       object tabStats: TTabSheet
         Caption = 'Statistics'
         ImageIndex = 3
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object Label52: TLabel
           Left = 14
           Top = 16
@@ -1421,8 +1461,8 @@ object form_main: Tform_main
             ParentShowHint = False
             ShowHint = True
             object Label16: TLabel
-              Left = 2
-              Top = 131
+              Left = 5
+              Top = 6
               Width = 20
               Height = 13
               Caption = 'Title'
@@ -1433,92 +1473,70 @@ object form_main: Tform_main
               Font.Style = []
               ParentFont = False
             end
-            object Label86: TLabel
-              Left = 1
-              Top = 3
-              Width = 76
-              Height = 13
-              Caption = 'Available charts'
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clWindowText
-              Font.Height = -11
-              Font.Name = 'Tahoma'
-              Font.Style = []
-              ParentFont = False
-            end
             object Label90: TLabel
-              Left = 3
-              Top = 206
+              Left = 6
+              Top = 81
               Width = 56
               Height = 26
               Caption = 'Background clolor'
               WordWrap = True
             end
             object SpeedButton6: TSpeedButton
-              Left = 139
-              Top = 181
+              Left = 84
+              Top = 54
               Width = 33
               Height = 22
               Action = acChartTitleFont
             end
             object lbTitleFont: TLabel
-              Left = 81
-              Top = 185
+              Left = 127
+              Top = 60
               Width = 47
               Height = 13
               Caption = 'Tahoma 8'
             end
             object Label92: TLabel
-              Left = 1
-              Top = 158
+              Left = 4
+              Top = 33
               Width = 47
               Height = 13
               Caption = 'Alignment'
             end
             object Label102: TLabel
-              Left = 3
-              Top = 185
+              Left = 6
+              Top = 60
               Width = 22
               Height = 13
               Caption = 'Font'
             end
             object eChartTitle: TEdit
-              Left = 81
-              Top = 128
+              Left = 84
+              Top = 3
               Width = 304
               Height = 21
               HelpContext = 312
-              TabOrder = 1
+              TabOrder = 0
               OnExit = eChartTitleExit
             end
-            object lbCharts: TListBox
-              Left = 81
-              Top = 6
-              Width = 304
-              Height = 116
-              ItemHeight = 13
-              TabOrder = 0
-              OnClick = lbChartsClick
-            end
             object cbBGColor: TColorBox
-              Left = 82
-              Top = 207
+              Left = 85
+              Top = 82
               Width = 152
               Height = 22
               HelpContext = 27
               Selected = clWindow
               Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
-              TabOrder = 3
+              TabOrder = 2
               OnChange = cbBGColorChange
             end
             object cbTitleAlignment: TComboBox
-              Left = 82
-              Top = 155
+              Left = 85
+              Top = 30
               Width = 90
               Height = 21
               HelpContext = 337
               Style = csDropDownList
-              TabOrder = 2
+              TabOrder = 1
               OnChange = cbTitleAlignmentChange
               Items.Strings = (
                 'Left justify'
@@ -1530,10 +1548,6 @@ object form_main: Tform_main
           object tabSeries: TTabSheet
             Caption = 'Series'
             ImageIndex = 5
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object Label6: TLabel
               Left = 125
               Top = 55
@@ -1673,10 +1687,6 @@ object form_main: Tform_main
           object tabItems: TTabSheet
             Caption = 'Categories'
             ImageIndex = 6
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object Label8: TLabel
               Left = 160
               Top = 7
@@ -2170,10 +2180,6 @@ object form_main: Tform_main
           object tabAxisAttributes: TTabSheet
             Caption = 'Axis profile'
             ImageIndex = 3
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object Label15: TLabel
               Left = 3
               Top = 6
@@ -2338,10 +2344,6 @@ object form_main: Tform_main
           object tabLegends: TTabSheet
             Caption = 'Legends'
             ImageIndex = 5
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object Label33: TLabel
               Left = 178
               Top = 6
@@ -2585,10 +2587,6 @@ object form_main: Tform_main
           object tabSections: TTabSheet
             Caption = 'Sections'
             ImageIndex = 6
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object pgSections: TPageControl
               Left = 0
               Top = 0
@@ -2600,10 +2598,6 @@ object form_main: Tform_main
               TabOrder = 0
               object tabNameSections: TTabSheet
                 Caption = 'Name sections'
-                ExplicitLeft = 0
-                ExplicitTop = 0
-                ExplicitWidth = 0
-                ExplicitHeight = 0
                 object Label4: TLabel
                   Left = 1
                   Top = -1
@@ -2776,10 +2770,6 @@ object form_main: Tform_main
               object tabValueSections: TTabSheet
                 Caption = 'Value sections'
                 ImageIndex = 1
-                ExplicitLeft = 0
-                ExplicitTop = 0
-                ExplicitWidth = 0
-                ExplicitHeight = 0
                 object Label32: TLabel
                   Left = 2
                   Top = 1
@@ -2909,10 +2899,6 @@ object form_main: Tform_main
       object tab_Commons: TTabSheet
         Caption = 'Commons'
         ImageIndex = 2
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object Label91: TLabel
           Left = 3
           Top = 13
@@ -3162,10 +3148,12 @@ object form_main: Tform_main
       AfterBuildChart = CWAfterBuildChart
       BezierMargin = 20
       Centered = True
-      Chart = Chart_CO2
-      MouseTimeFormat = 'mmmm" "yyyyy'
+      GraphBorders = gbNone
       OnDataChange = CWDataChange
+      OnEndAnimation = CWEndAnimation
       OnQuerySpace = CWQuerySpace
+      OnStartAnimation = CWStartAnimation
+      OnSuspendAnimation = CWSuspendAnimation
       Rulers = ruNames
     end
   end
@@ -3330,6 +3318,7 @@ object form_main: Tform_main
       Hint = 'Save As|Saves the active file with a new name'
       ImageIndex = 6
       ShortCut = 16467
+      BeforeExecute = FileSaveAs1BeforeExecute
       OnAccept = FileSaveAs1Accept
       OnUpdate = FileSaveAs1Update
     end
@@ -3404,13 +3393,152 @@ object form_main: Tform_main
       OnExecute = acResetContractionExecute
       OnUpdate = acResetContractionUpdate
     end
+    object acClose: TAction
+      Caption = 'Close'
+      OnExecute = acCloseExecute
+      OnUpdate = acCloseUpdate
+    end
+    object acChartList: TAction
+      Caption = 'Show chart list'
+      Hint = 'Show chart list'
+      ImageIndex = 11
+      OnExecute = acChartListExecute
+    end
   end
   object ImageList1: TImageList
     Left = 705
     Top = 537
     Bitmap = {
-      494C01010B00D8064C0610001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
-      0000000000003600000028000000400000003000000001002000000000000030
+      494C01010C00D806780710001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      0000000000003600000028000000400000004000000001002000000000000040
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -3441,89 +3569,89 @@ object form_main: Tform_main
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000008080000080
       8000008080000080800000808000008080000080800000808000008080000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000004DA1E4004DA1E4004DA1E4004DA1
+      E4004DA1E4004DA1E400000000004DA1E4004DA1E4004DA1E4004DA1E4004DA1
+      E4004DA1E4004DA1E4004DA1E400000000000000000000000000000000000000
       0000257151003CA4750035835A00699175000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000FFFF00000000000080
       8000008080000080800000808000008080000080800000808000008080000080
-      8000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      8000000000000000000000000000000000004DA1E4004DA1E4004DA1E4004DA1
+      E4004DA1E4004DA1E400000000004DA1E4004DA1E400000000004DA1E4004DA1
+      E400000000004DA1E4004DA1E400000000000000000000000000000000000000
       000015663F0040B57C003FAA72002F7E5200709A830000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00000000000000000000000000000000000000000000FFFFFF0000FFFF000000
       0000008080000080800000808000008080000080800000808000008080000080
-      8000008080000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      8000008080000000000000000000000000004DA1E4004DA1E400000000000000
+      00004DA1E4004DA1E400000000004DA1E4004DA1E400000000004DA1E4004DA1
+      E400000000004DA1E4004DA1E400000000000000000000000000000000000000
       0000338358003FB9790034B270003CB0750020774B006DAC8C00000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000FFFF00FFFFFF0000FF
       FF00000000000080800000808000008080000080800000808000008080000080
-      8000008080000080800000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      8000008080000080800000000000000000004DA1E4004DA1E400000000000000
+      00000000000000000000000000004DA1E4004DA1E400000000004DA1E4004DA1
+      E400000000004DA1E4004DA1E400000000000000000000000000000000000000
       00003F8D5E0050C985001CA65E002BB6720045B97E00237A4E00719B84000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00000000000000000000000000000000000000000000FFFFFF0000FFFF00FFFF
       FF0000FFFF000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000004DA1E4004DA1E400000000000000
+      00000000000000000000000000004DA1E4004DA1E400000000004DA1E4004DA1
+      E400000000004DA1E4004DA1E400000000000000000000000000000000000000
       00003B90630068C1890045B57B0030AF7B0048C385002987580055856B000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000FFFF00FFFFFF0000FF
       FF00FFFFFF0000FFFF00FFFFFF0000FFFF00FFFFFF0000FFFF00000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000004DA1E4004DA1E400000000000000
+      00000000000000000000000000004DA1E4004DA1E400000000004DA1E4004DA1
+      E400000000004DA1E4004DA1E400000000000000000000000000000000000000
       00003EA1710069CF950051C1870058CB99003694650076BC9800000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       00000000000000000000000000000000000000000000FFFFFF0000FFFF00FFFF
       FF0000FFFF00FFFFFF0000FFFF00FFFFFF0000FFFF00FFFFFF00000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000004DA1E4004DA1E400000000000000
+      00000000000000000000000000000000000000000000000000004DA1E4004DA1
+      E400000000004DA1E4004DA1E400000000000000000000000000000000000000
       00002C9D6B006CDEA20062CD950046A1740086B69C0000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000FFFF00FFFFFF0000FF
       FF00000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000004DA1E4004DA1E400000000000000
+      00000000000000000000000000000000000000000000000000004DA1E4004DA1
+      E400000000004DA1E4004DA1E400000000000000000000000000000000000000
       000040B685005ACD94005BB788008BC8A6000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000004DA1E4004DA1E400000000000000
+      00004DA1E4004DA1E400000000000000000000000000000000004DA1E4004DA1
+      E400000000004DA1E4004DA1E400000000000000000000000000000000000000
       00003EA97E0055B586008FD1AE00000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000004DA1E4004DA1E4004DA1E4004DA1
+      E4004DA1E4004DA1E40000000000000000000000000000000000000000000000
+      0000000000004DA1E4004DA1E400000000000000000000000000000000000000
       000065B4930097D3B10000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
-      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000004DA1E4004DA1E4004DA1E4004DA1
+      E4004DA1E4004DA1E40000000000000000000000000000000000000000000000
+      0000000000004DA1E4004DA1E400000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -3796,12 +3924,16 @@ object form_main: Tform_main
       0000000000000000000000000000000000000000000000000000000000000000
       00000000000099959000494641003D3835005C58530047433E008B857E000000
       000000000000000000000000000000000000424D3E000000000000003E000000
-      2800000040000000300000000100010000000000800100000000000000000000
-      000000000000000000000000FFFFFF00FFFFFF7FFFFF0000FFFFFE7FFFFF0000
-      F3FFFCFF001F0000F1FFF81F000F0000F0FFF80F00070000F07FCCE700030000
-      F03F9E7300010000F01F9F7300000000F01F3FF9001F0000F03F3FF9001F0000
-      F07F9FF3001F0000F0FF9FF38FF10000F1FFCFE7FFF90000F3FFE38FFF750000
-      FFFFF01FFF8F0000FFFFFC7FFFFF0000FFFF9001FF7EFFFF8001C003BFFFFFFF
+      2800000040000000400000000100010000000000000200000000000000000000
+      000000000000000000000000FFFFFF0000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      0000000000000000000000000000000000000000000000000000000000000000
+      00000000000000000000000000000000FFFFFF7FFFFFFFFFFFFFFE7FFFFFFFFF
+      F3FFFCFF001FFFFFF1FFF81F000F0201F0FFF80F00070249F07FCCE700033249
+      F03F9E7300013E49F01F9F7300003E49F01F3FF9001F3E49F03F3FF9001F3FC9
+      F07F9FF3001F3FC9F0FF9FF38FF133C9F1FFCFE7FFF903F9F3FFE38FFF7503F9
+      FFFFF01FFF8FFFFFFFFFFC7FFFFFFFFFFFFF9001FF7EFFFF8001C003BFFFFFFF
       8001E003F003FF3F8BB9E003E003FE3F8001E003E003FC3F8B99E003E003F83F
       80010001E003F03F8BB980002003E03F8001E007E002E03F8BB9E00FE003F03F
       8001E00FE003F83F9FF9E027E003FC3F8001C073E003FE3F80019E79FFFFFF3F
@@ -3813,7 +3945,6 @@ object form_main: Tform_main
       000000000000}
   end
   object Curve_CO2: TCWCurve
-    AnimationSpeed = asMediumSlow
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
@@ -3821,12 +3952,11 @@ object form_main: Tform_main
     Font.Style = []
     KeepFontColor = False
     StatLineWidth = 0
-    Animation = True
     LineWidth = 2
     MinPointSpacing = 1
     SeriesStyles = <>
     Left = 580
-    Top = 477
+    Top = 485
   end
   object Leg_CO2: TCWLegend
     Anchoring = anLeftInside
@@ -3873,7 +4003,7 @@ object form_main: Tform_main
     Font.Style = []
     HorizMargins = 0
     PointItemIndex = 768
-    PointName = '3/1/2022'
+    PointName = '2022-03-01T00:00:00.000Z'
     PointOptions = [poShowConnectionLine, poThinConnectionLine]
     Text.Strings = (
       'Pandemic')
@@ -3882,7 +4012,7 @@ object form_main: Tform_main
     Top = 645
   end
   object Chart_CO2: TCWSpanChart
-    FileName = 'CO2Graph.CWD'
+    DataFileName = 'CO2Graph.CWD'
     GraphBGColor = clSkyBlue
     InnerMargins.Right = 20
     Legends = <
@@ -3896,7 +4026,7 @@ object form_main: Tform_main
       item
         Color = clRed
         Graph = Curve_CO2
-        Title = 'Hockey stick'
+        Title = 'Hockey  stick'
       end>
     Title = 'CO2 in atmosphere 1958 - 2023'
     TitleFont.Charset = DEFAULT_CHARSET
@@ -3913,7 +4043,7 @@ object form_main: Tform_main
     NameScale.Font.Style = []
     NameScale.Qualifier = 'Years'
     NameScale.ShowLabels = False
-    NameScale.OverflowAction = ovContraction
+    NameScale.OverflowAction = ovCompression
     NameSectionDefs = Sect_Year
     SpanType = ntMonthSpan
     TimeFormat = 'yy" "mm'
@@ -3964,6 +4094,9 @@ object form_main: Tform_main
       object SaveAs1: TMenuItem
         Action = FileSaveAs1
       end
+      object Close1: TMenuItem
+        Action = acClose
+      end
     end
     object Chart1: TMenuItem
       Caption = 'Chart'
@@ -4012,6 +4145,9 @@ object form_main: Tform_main
       object Viewdashboard1: TMenuItem
         Action = acDashbord
         AutoCheck = True
+      end
+      object acChartList1: TMenuItem
+        Action = acChartList
       end
     end
   end

@@ -1,7 +1,7 @@
 ﻿ChartWriter CWR
 [PROPERTIES]
 Chart=C_577
-LiveResize=1
+LiveResize=0
 [Data]
 0=50000
 50=51000
@@ -424,9 +424,12 @@ MinPointSpacing=2
 MaxPointSpacing=0
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 KeepFontColor=0
-Animation=0
-AnimationSpeed=1
-AnimationPause=0
+Duration=3000
+SplitDuration=0
+Immediate=1
+Pause=0
+anFlow=0
+anGrow=0
 StatLine=0
 StatLineWidth=1
 SMAPeriods=0
@@ -437,11 +440,13 @@ Ident=Elevation
 Style=1
 LineStyle=0
 LineWidth=1
+BaseLineValue=0
 {STYLE1}
 Ident=Speed
 Style=0
 LineStyle=0
 LineWidth=2
+BaseLineValue=0
 [EOF]
 [CURVE]
 Name=Curve_577
@@ -459,9 +464,12 @@ MinPointSpacing=2
 MaxPointSpacing=0
 Font=-16777208,0|0|0|0|,8,Tahoma,1
 KeepFontColor=0
-Animation=0
-AnimationSpeed=1
-AnimationPause=0
+Duration=3000
+SplitDuration=0
+Immediate=1
+Pause=0
+anFlow=0
+anGrow=0
 StatLine=0
 StatLineWidth=1
 SMAPeriods=0
@@ -472,11 +480,13 @@ Ident=Elevation
 Style=1
 LineStyle=0
 LineWidth=1
+BaseLineValue=0
 {STYLE1}
 Ident=Speed
 Style=0
 LineStyle=0
 LineWidth=2
+BaseLineValue=0
 [EOF]
 [SPANCHART]
 Name=C_577
@@ -495,6 +505,7 @@ TimeFormat=
 MouseTimeFormat=
 GraphBGColor=-16777211
 GraphBorders=0
+AnimationEnabled=1
 toName=0
 toValue=0
 InnerLeftMargin=0
